@@ -13,6 +13,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -66,6 +67,14 @@ final class Ui {
     static Drawable ripple(Context c, Drawable content, float radiusPx) {
         return new RippleDrawable(ColorStateList.valueOf(alpha(col(c, R.color.text), 0.12f)), content,
                 round(0xFF000000, radiusPx));
+    }
+
+    /** Slides v in from the side dir points to (-1 left, 1 right) while fading it in; 0 does nothing. */
+    static void slideIn(View v, int dir, int distanceDp) {
+        if (dir == 0) return;
+        v.setTranslationX(dir * dp(v.getContext(), distanceDp));
+        v.setAlpha(0f);
+        v.animate().translationX(0).alpha(1f).setDuration(220).setInterpolator(new DecelerateInterpolator(2f)).start();
     }
 
     static void clickable(View v, float radiusDp) {

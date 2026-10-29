@@ -36,7 +36,11 @@ final class FoodScreen extends Screen {
         final FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Food", "Calories and macros"));
-        col.addView(a.dateStrip());
+        col.addView(a.dateStrip(true));
+        // Everything for the day itself, so it can slide in when the day changes.
+        LinearLayout body = Ui.vbox(c);
+        col.addView(body);
+        Ui.slideIn(body, a.daySlide, 48);
 
         String day = a.selectedDay.toString();
         List<Db.Food> foods = db.foodForDay(day);
@@ -61,7 +65,7 @@ final class FoodScreen extends Screen {
         sum.addView(TodayScreen.macroRow(a, "Protein", t[1], prefs.proteinTarget(), R.color.protein));
         sum.addView(TodayScreen.macroRow(a, "Carbs", t[2], prefs.carbsTarget(), R.color.carbs));
         sum.addView(TodayScreen.macroRow(a, "Fat", t[3], prefs.fatTarget(), R.color.fat));
-        col.addView(sum);
+        body.addView(sum);
 
         for (int m = 0; m < FastingLogic.MEALS.length; m++) {
             final int meal = m;
@@ -115,7 +119,7 @@ final class FoodScreen extends Screen {
             } else {
                 chevron.setVisibility(View.INVISIBLE);
             }
-            col.addView(card);
+            body.addView(card);
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         final Button fab = Ui.fab(c, "Add food", R.color.eat);

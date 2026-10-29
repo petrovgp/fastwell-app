@@ -57,6 +57,8 @@ public class MainActivity extends Activity {
     Prefs prefs;
     /** Day shown by the Food and Workouts journals; shared so switching tabs keeps the same day. */
     LocalDate selectedDay = LocalDate.now();
+    /** Direction of the day change behind the current rebuild (-1 earlier, 1 later, 0 none), for slide animations. */
+    int daySlide;
 
     private LinearLayout column;
     private FrameLayout content;
@@ -406,6 +408,7 @@ public class MainActivity extends Activity {
         }
         content.removeAllViews();
         View v = screen.build();
+        daySlide = 0;
         content.addView(v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         if (y > 0) {
             final ScrollView sv = findScroll(v);
@@ -539,14 +542,17 @@ public class MainActivity extends Activity {
     }
 
     /** Date strip used by Food and Workouts: previous day, tap for calendar, next day. */
-    View dateStrip() {
+    View dateStrip() { return dateStrip(false); }
+
+    /** As {@link #dateStrip()}; when animated, the day label slides in from the side the day moved towards. */
+    View dateStrip(boolean animated) {
         LinearLayout row = Ui.hbox(this);
         row.setBackground(Ui.round(Ui.col(this, R.color.surface), Ui.dp(this, 24), Ui.col(this, R.color.outline), Ui.night(this) ? 0 : Ui.dp(this, 1)));
         row.setLayoutParams(Ui.lpm(this, Ui.MATCH, Ui.WRAP, 0, 0, 0, 12));
         ImageView prev = Ui.iconButton(this, R.drawable.ic_left, R.color.text, "Previous day");
         prev.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { selectedDay = selectedDay.minusDays(1); refresh(); }
+            public void onClick(View v) { goToDay(selectedDay.minusDays(1)); }
         });
         TextView label = Ui.text(this, Ui.dayLabel(selectedDay), 16, R.color.text, true);
         label.setGravity(Gravity.CENTER);
@@ -558,8 +564,7 @@ public class MainActivity extends Activity {
                 DatePickerDialog d = new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker view, int y, int m, int day) {
-                        selectedDay = LocalDate.of(y, m + 1, day);
-                        refresh();
+                        goToDay(LocalDate.of(y, m + 1, day));
                     }
                 }, selectedDay.getYear(), selectedDay.getMonthValue() - 1, selectedDay.getDayOfMonth());
                 d.getDatePicker().setMaxDate(System.currentTimeMillis());
@@ -573,14 +578,20 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 if (isToday) return;
-                selectedDay = selectedDay.plusDays(1);
-                refresh();
+                goToDay(selectedDay.plusDays(1));
             }
         });
         row.addView(prev);
         row.addView(label, Ui.lp(0, Ui.WRAP, 1f));
         row.addView(next);
+        if (animated) Ui.slideIn(label, daySlide, 24);
         return row;
+    }
+
+    private void goToDay(LocalDate d) {
+        daySlide = Integer.signum(d.compareTo(selectedDay));
+        selectedDay = d;
+        refresh();
     }
 
     // ---------- notifications permission ----------
