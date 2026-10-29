@@ -136,6 +136,8 @@ final class DayPickerScreen extends Screen {
     }
 
     private void show(LocalDate d) {
+        // A still-rolling column would otherwise keep moving and drag the day away again.
+        dial.stop();
         day = d;
         syncDial();
         update();

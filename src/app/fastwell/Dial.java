@@ -140,6 +140,17 @@ final class Dial extends View {
         invalidate();
     }
 
+    /** Halts a column that is still rolling, leaving it centred on its current value. */
+    void stop() {
+        if (anim == null || !anim.isRunning()) return;
+        anim.cancel();
+        Col c = cols.get(animCol);
+        c.pos = c.index();
+        c.last = c.index();
+        describe();
+        invalidate();
+    }
+
     /** Runs once a column has finished snapping into place after a drag or tap. */
     void setOnSettle(Runnable r) { onSettle = r; }
 
