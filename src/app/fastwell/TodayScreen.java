@@ -198,19 +198,19 @@ final class TodayScreen extends Screen {
             });
             row.addView(log, Ui.lp(0, Ui.dp(c, 52), 1f));
         } else {
-            Button log = Ui.primary(c, "Log food", R.color.eat);
-            log.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { openFood(); }
-            });
-            row.addView(log, Ui.lp(0, Ui.dp(c, 52), 1f));
-            row.addView(Ui.hspace(c, 12));
             Button start = Ui.outline(c, "Start fast", R.color.primary);
             start.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) { a.startFast(); }
             });
             row.addView(start, Ui.lp(0, Ui.dp(c, 52), 1f));
+            row.addView(Ui.hspace(c, 12));
+            Button log = Ui.primary(c, "Log food", R.color.eat);
+            log.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) { openFood(); }
+            });
+            row.addView(log, Ui.lp(0, Ui.dp(c, 52), 1f));
         }
         return row;
     }
