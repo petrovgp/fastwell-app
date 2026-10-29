@@ -22,8 +22,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Completed fasts with streaks, stats and a month calendar; tap a day to edit or delete its fast (several on one day are
- * listed on DayFastsScreen first), or add a past one; both open PastFastScreen.
+ * Completed fasts with streaks, stats and a month calendar; tap a day to list the fasts that ended on it in DayFastsScreen
+ * (from there each opens PastFastScreen to edit or delete), or add a past one in PastFastScreen.
  */
 final class FastHistoryScreen extends Screen {
 
@@ -193,7 +193,7 @@ final class FastHistoryScreen extends Screen {
         return card;
     }
 
-    private View dayCell(final LocalDate d, LocalDate today, final List<Db.Fast> dayFasts) {
+    private View dayCell(final LocalDate d, LocalDate today, List<Db.Fast> dayFasts) {
         LinearLayout cell = Ui.vbox(c);
         cell.setGravity(Gravity.CENTER);
         boolean isToday = d.equals(today);
@@ -204,25 +204,22 @@ final class FastHistoryScreen extends Screen {
         cell.addView(num);
         if (dayFasts == null) {
             cell.addView(Ui.space(c, 22));
-            return cell;
+            cell.setContentDescription(Ui.dayLabel(d) + ", no fasts");
+        } else {
+            boolean met = false;
+            for (Db.Fast f : dayFasts) met |= f.met();
+            ImageView ic = Ui.icon(c, met ? R.drawable.ic_day_met : R.drawable.ic_day_partial, met ? R.color.success : R.color.warn, 20);
+            ic.setLayoutParams(Ui.lpm(c, Ui.dp(c, 20), Ui.dp(c, 20), 0, 2, 0, 0));
+            cell.addView(ic);
+            cell.setContentDescription(Ui.dayLabel(d) + ", " + (met ? "goal met" : "ended early"));
         }
-        boolean met = false;
-        for (Db.Fast f : dayFasts) met |= f.met();
-        ImageView ic = Ui.icon(c, met ? R.drawable.ic_day_met : R.drawable.ic_day_partial, met ? R.color.success : R.color.warn, 20);
-        ic.setLayoutParams(Ui.lpm(c, Ui.dp(c, 20), Ui.dp(c, 20), 0, 2, 0, 0));
-        cell.addView(ic);
-        cell.setContentDescription(Ui.dayLabel(d) + ", " + (met ? "goal met" : "ended early"));
+        // No fast can have ended on a future day, so only today and earlier open DayFastsScreen.
+        if (d.isAfter(today)) return cell;
         Ui.clickable(cell, 12);
         cell.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { openDay(d, dayFasts); }
+            public void onClick(View v) { a.push(new DayFastsScreen(a, d)); }
         });
         return cell;
-    }
-
-    /** One fast opens straight into the editor; several are listed on DayFastsScreen first. */
-    private void openDay(LocalDate d, List<Db.Fast> dayFasts) {
-        if (dayFasts.size() == 1) a.push(new PastFastScreen(a, dayFasts.get(0)));
-        else a.push(new DayFastsScreen(a, d));
     }
 }
