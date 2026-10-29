@@ -1,5 +1,7 @@
 package app.fastwell;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -33,7 +35,8 @@ final class Dial extends View {
     static final class Col {
         final String label, unit;
         final double min, step;
-        final int count, decimals, source;
+        final int decimals, source;
+        int count;
         final Derive derive;
         Format format;
         float pos;
@@ -70,12 +73,14 @@ final class Dial extends View {
     private final float itemH, headerH, slop;
     private final int ink, muted, primary;
     private Listener listener;
+    private Runnable onSettle;
     private VelocityTracker vt;
     private float lastY, downY;
     private boolean dragging;
     private int active = -1;
     private int focusCol = 0;
     private ValueAnimator anim;
+    private int animCol = -1;
 
     Dial(Context c) {
         super(c);
@@ -119,6 +124,24 @@ final class Dial extends View {
     }
 
     void setListener(Listener l) { listener = l; }
+
+    /** Changes how far an editable column reaches (e.g. 28-31 days per month), pulling its value back inside. */
+    void setMax(int col, double max) {
+        Col c = cols.get(col);
+        int count = (int) Math.round((max - c.min) / c.step) + 1;
+        if (count == c.count) return;
+        c.count = count;
+        if (c.pos > count - 1) {
+            if (anim != null && animCol == col) anim.cancel();
+            c.pos = count - 1;
+        }
+        c.last = c.index();
+        describe();
+        invalidate();
+    }
+
+    /** Runs once a column has finished snapping into place after a drag or tap. */
+    void setOnSettle(Runnable r) { onSettle = r; }
 
     /** Shows a column's values as text (e.g. a day offset as "Yesterday") instead of numbers. */
     void setFormat(int col, Format f) {
@@ -285,9 +308,21 @@ final class Dial extends View {
     private void settle(final int col, int target) {
         if (anim != null) anim.cancel();
         final Col c = cols.get(col);
+        animCol = col;
         anim = ValueAnimator.ofFloat(c.pos, target);
         anim.setDuration((long) (200 + Math.min(450, Math.abs(target - c.pos) * 60)));
         anim.setInterpolator(new DecelerateInterpolator(1.8f));
+        anim.addListener(new AnimatorListenerAdapter() {
+            private boolean cancelled;
+
+            @Override
+            public void onAnimationCancel(Animator a) { cancelled = true; }
+
+            @Override
+            public void onAnimationEnd(Animator a) {
+                if (!cancelled && onSettle != null) onSettle.run();
+            }
+        });
         anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator va) {

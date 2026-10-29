@@ -20,6 +20,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -30,6 +31,24 @@ final class FoodScreen extends Screen {
     private FrameLayout dial;
 
     FoodScreen(MainActivity a) { super(a); }
+
+    @Override
+    DayPickerScreen dayPicker() {
+        return new DayPickerScreen(a, "Choose food day", R.color.eat, new DayPickerScreen.Summary() {
+            @Override
+            public String of(LocalDate d) {
+                double ml = 0;
+                int n = 0;
+                for (Db.Food f : db.foodForDay(d.toString())) {
+                    if (f.meal == FastingLogic.WATER) ml += millilitres(f.amount);
+                    else n++;
+                }
+                if (n == 0 && ml == 0) return "Nothing logged";
+                String s = n + (n == 1 ? " item" : " items") + "  -  " + Ui.n0(db.totalsForDay(d.toString())[0]) + " kcal";
+                return ml > 0 ? s + "  -  " + Ui.n0(ml) + " ml water" : s;
+            }
+        });
+    }
 
     @Override
     View build() {

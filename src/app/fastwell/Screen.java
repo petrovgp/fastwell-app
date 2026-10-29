@@ -29,4 +29,7 @@ abstract class Screen {
 
     /** Which bottom-nav tab is highlighted while this screen is shown. */
     int navTab() { return -1; }
+
+    /** Screen opened by tapping the date strip's day label. */
+    DayPickerScreen dayPicker() { return new DayPickerScreen(a, "Choose day", R.color.primary, null); }
 }

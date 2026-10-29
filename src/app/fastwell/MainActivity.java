@@ -560,16 +560,7 @@ public class MainActivity extends Activity {
         Ui.clickable(label, 20);
         label.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                DatePickerDialog d = new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker view, int y, int m, int day) {
-                        goToDay(LocalDate.of(y, m + 1, day));
-                    }
-                }, selectedDay.getYear(), selectedDay.getMonthValue() - 1, selectedDay.getDayOfMonth());
-                d.getDatePicker().setMaxDate(System.currentTimeMillis());
-                d.show();
-            }
+            public void onClick(View v) { push(screen.dayPicker()); }
         });
         ImageView next = Ui.iconButton(this, R.drawable.ic_right, R.color.text, "Next day");
         final boolean isToday = !selectedDay.isBefore(LocalDate.now());
@@ -586,6 +577,13 @@ public class MainActivity extends Activity {
         row.addView(next);
         if (animated) Ui.slideIn(label, daySlide, 24);
         return row;
+    }
+
+    /** Returns from the day picker to the journal it was opened from, showing day d. */
+    void pickDay(LocalDate d) {
+        daySlide = Integer.signum(d.compareTo(selectedDay));
+        selectedDay = d;
+        pop();
     }
 
     private void goToDay(LocalDate d) {

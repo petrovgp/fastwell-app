@@ -13,12 +13,27 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /** Workout journal for the selected day. */
 final class WorkoutsScreen extends Screen {
 
     WorkoutsScreen(MainActivity a) { super(a); }
+
+    @Override
+    DayPickerScreen dayPicker() {
+        return new DayPickerScreen(a, "Choose workout day", R.color.train, new DayPickerScreen.Summary() {
+            @Override
+            public String of(LocalDate d) {
+                List<Db.Workout> ws = db.workoutsForDay(d.toString());
+                if (ws.isEmpty()) return "No workouts logged";
+                int mins = 0;
+                for (Db.Workout w : ws) mins += minutes(w);
+                return ws.size() + (ws.size() == 1 ? " session" : " sessions") + "  -  " + mins + " min";
+            }
+        });
+    }
 
     @Override
     View build() {
