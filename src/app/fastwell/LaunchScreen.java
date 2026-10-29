@@ -40,7 +40,7 @@ final class LaunchScreen extends Screen {
         // Tagline as three separate words around two peach dots, so all three always show.
         LinearLayout tag = Ui.hbox(c);
         tag.setGravity(Gravity.CENTER);
-        String[] words = {"Fast", "Eat", "Train"};
+        String[] words = {"Eat", "Fast", "Train"};
         for (int i = 0; i < words.length; i++) {
             if (i > 0) {
                 View dot = new View(c);
