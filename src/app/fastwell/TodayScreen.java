@@ -187,7 +187,7 @@ final class TodayScreen extends Screen {
             Button end = Ui.primary(c, "End fast", R.color.primary);
             end.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) { FastScreen.endFastDialog(a, active); }
+                public void onClick(View v) { a.push(new EndFastScreen(a, active)); }
             });
             row.addView(end, Ui.lp(0, Ui.dp(c, 52), 1f));
             row.addView(Ui.hspace(c, 12));

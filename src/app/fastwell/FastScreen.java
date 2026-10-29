@@ -1,15 +1,10 @@
 package app.fastwell;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import java.time.Instant;
@@ -25,8 +20,6 @@ final class FastScreen extends Screen {
     private Db.Fast active;
 
     FastScreen(MainActivity a) { super(a); }
-
-    static final String[] MOODS = {"Rough", "Meh", "OK", "Good", "Great"};
 
     @Override
     View build() {
@@ -69,7 +62,7 @@ final class FastScreen extends Screen {
         View.OnClickListener toggle = active != null
                 ? new View.OnClickListener() {
                     @Override
-                    public void onClick(View v) { endFastDialog(a, active); }
+                    public void onClick(View v) { a.push(new EndFastScreen(a, active)); }
                 }
                 : new View.OnClickListener() {
                     @Override
@@ -208,83 +201,4 @@ final class FastScreen extends Screen {
     }
 
     private void editStart() { a.push(new EditStartScreen(a, active)); }
-
-    // ---------- shared dialogs ----------
-
-    static void endFastDialog(final MainActivity a, final Db.Fast f) {
-        final long[] end = {System.currentTimeMillis()};
-        LinearLayout body = Ui.dialogBody(a);
-        final TextView total = Ui.big(a, FastingLogic.dur(end[0] - f.startAt), 30, R.color.text);
-        body.addView(total);
-        final TextView goal = Ui.muted(a, "");
-        body.addView(goal);
-        final Button endBtn = Ui.tonal(a, "", R.color.primary);
-        final Runnable update = new Runnable() {
-            @Override
-            public void run() {
-                long d = end[0] - f.startAt;
-                total.setText(FastingLogic.dur(d));
-                goal.setText(d >= f.goalMs() ? "Goal of " + FastingLogic.dur(f.goalMs()) + " met"
-                        : FastingLogic.dur(f.goalMs() - d) + " short of your " + FastingLogic.dur(f.goalMs()) + " goal");
-                endBtn.setText("Ended " + Ui.dateTime(a, end[0]) + "  (change)");
-            }
-        };
-        update.run();
-        endBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                a.pickDateTime(end[0], new MainActivity.LongCb() {
-                    @Override
-                    public void on(long t) {
-                        if (t <= f.startAt) { Ui.toast(a, "End must be after the start"); return; }
-                        if (t > System.currentTimeMillis() + 60000) { Ui.toast(a, "End can't be in the future"); return; }
-                        end[0] = t;
-                        update.run();
-                    }
-                });
-            }
-        });
-        body.addView(endBtn, Ui.lpm(a, Ui.MATCH, Ui.dp(a, 44), 0, 12, 0, 4));
-
-        body.addView(Ui.labeled(a, "How did it feel? (optional)", new View(a)));
-        final RadioGroup moods = new RadioGroup(a);
-        moods.setOrientation(RadioGroup.HORIZONTAL);
-        for (int i = 0; i < MOODS.length; i++) {
-            RadioButton rb = new RadioButton(a);
-            rb.setText(MOODS[i]);
-            rb.setTextSize(12);
-            rb.setId(1000 + i);
-            moods.addView(rb, new RadioGroup.LayoutParams(0, Ui.WRAP, 1f));
-        }
-        body.addView(moods);
-        final EditText note = Ui.field(a, "Note (optional)", Ui.TXT);
-        body.addView(note, Ui.lp(Ui.MATCH, Ui.WRAP));
-
-        new AlertDialog.Builder(a)
-                .setTitle("End fast")
-                .setView(body)
-                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        int mood = moods.getCheckedRadioButtonId() >= 1000 ? moods.getCheckedRadioButtonId() - 999 : 0;
-                        a.db.endFast(f.id, end[0], mood, note.getText().toString().trim());
-                        Notifier.refresh(a);
-                        a.refresh();
-                        a.snack("Fast saved  -  " + FastingLogic.dur(end[0] - f.startAt), new Runnable() {
-                            @Override
-                            public void run() {
-                                Db.Fast back = a.db.getFast(f.id);
-                                if (back != null && a.db.activeFast() == null) {
-                                    back.endAt = 0;
-                                    back.mood = 0;
-                                    back.note = "";
-                                    a.db.updateFast(back);
-                                }
-                            }
-                        });
-                    }
-                })
-                .setNegativeButton("Keep fasting", null)
-                .show();
-    }
 }
