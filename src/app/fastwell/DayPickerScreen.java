@@ -3,7 +3,6 @@ package app.fastwell;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -49,19 +48,9 @@ final class DayPickerScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout bar = Ui.hbox(c);
-        bar.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 16), Ui.dp(c, 4));
-        ImageView back = Ui.iconButton(c, R.drawable.ic_left, R.color.text, "Back");
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { a.handleBack(); }
-        });
-        bar.addView(back);
-        root.addView(bar);
-
         LinearLayout col = Ui.vbox(c);
-        col.setPadding(Ui.dp(c, 16), 0, Ui.dp(c, 16), 0);
-        col.addView(OnboardingScreen.title(c, title));
+        col.setPadding(Ui.dp(c, 16), Ui.dp(c, 8), Ui.dp(c, 16), 0);
+        col.addView(FastHistoryScreen.backHeader(a, title));
         col.addView(summaryCard());
 
         dial = new Dial(c);
