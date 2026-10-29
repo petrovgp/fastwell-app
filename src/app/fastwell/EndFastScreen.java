@@ -1,5 +1,6 @@
 package app.fastwell;
 
+import android.app.AlertDialog;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -8,10 +9,15 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Full-screen end of a running fast: total time, the end it will be saved with, and an optional mood. The back arrow cancels. */
+/**
+ * Full-screen end of a running fast: total time, the end it will be saved with, and an optional mood. The back arrow cancels.
+ * A fast under SHORT_MS asks first whether to save it or discard it.
+ */
 final class EndFastScreen extends Screen {
     /** Top to bottom as shown; the stored mood is 5 for Great down to 1 for Rough (0 = not picked). */
     static final String[] MOODS = {"Great", "Good", "Neutral", "Bad", "Rough"};
+    /** Fasts shorter than this ask whether to save or discard them. */
+    static final long SHORT_MS = 60 * 60000L;
 
     private final Db.Fast fast;
     private int mood;
@@ -102,6 +108,60 @@ final class EndFastScreen extends Screen {
     void tick() { update(); }
 
     private void save() {
+        long d = System.currentTimeMillis() - fast.startAt;
+        if (d < SHORT_MS) confirmShort(d); else saveNow();
+    }
+
+    /** Offers to drop a fast shorter than SHORT_MS, with the same split Discard / Save row as PastFastScreen's delete dialog. */
+    private void confirmShort(long d) {
+        LinearLayout body = Ui.dialogBody(c);
+        TextView msg = Ui.body(c, "You fasted " + FastingLogic.dur(d) + ". Very short fasts lower your average and goal-met rate,"
+                + " so you may want to leave this one out of your history.");
+        msg.setTextColor(Ui.col(c, R.color.text2));
+        body.addView(msg);
+        LinearLayout buttons = Ui.hbox(c);
+        buttons.setPadding(0, Ui.dp(c, 20), 0, Ui.dp(c, 20));
+        Button discard = Ui.tonal(c, "Discard", R.color.error);
+        Button keep = Ui.primary(c, "Save", R.color.primary);
+        buttons.addView(discard, Ui.lp(0, Ui.dp(c, 56), 1f));
+        buttons.addView(Ui.hspace(c, 12));
+        buttons.addView(keep, Ui.lp(0, Ui.dp(c, 56), 1f));
+        body.addView(buttons, Ui.lp(Ui.MATCH, Ui.WRAP));
+
+        final AlertDialog dlg = new AlertDialog.Builder(c)
+                .setTitle("Save this short fast?")
+                .setView(body)
+                .create();
+        discard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dlg.dismiss();
+                discard();
+            }
+        });
+        keep.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dlg.dismiss();
+                saveNow();
+            }
+        });
+        dlg.show();
+    }
+
+    private void discard() {
+        db.deleteFast(fast.id);
+        Notifier.refresh(a);
+        a.pop();
+        a.snack("Fast discarded", new Runnable() {
+            @Override
+            public void run() {
+                if (db.activeFast() == null) db.insertFast(fast);
+            }
+        });
+    }
+
+    private void saveNow() {
         final long end = System.currentTimeMillis();
         db.endFast(fast.id, end, mood, "");
         Notifier.refresh(a);

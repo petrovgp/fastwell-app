@@ -1,7 +1,5 @@
 package app.fastwell;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -23,7 +21,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Completed fasts with streaks, stats and a month calendar; tap a day to edit or delete its fast, or add a past one; both open PastFastScreen. */
+/**
+ * Completed fasts with streaks, stats and a month calendar; tap a day to edit or delete its fast (several on one day are
+ * listed on DayFastsScreen first), or add a past one; both open PastFastScreen.
+ */
 final class FastHistoryScreen extends Screen {
 
     private YearMonth month = YearMonth.now();
@@ -192,7 +193,7 @@ final class FastHistoryScreen extends Screen {
         return card;
     }
 
-    private View dayCell(LocalDate d, LocalDate today, final List<Db.Fast> dayFasts) {
+    private View dayCell(final LocalDate d, LocalDate today, final List<Db.Fast> dayFasts) {
         LinearLayout cell = Ui.vbox(c);
         cell.setGravity(Gravity.CENTER);
         boolean isToday = d.equals(today);
@@ -214,29 +215,14 @@ final class FastHistoryScreen extends Screen {
         Ui.clickable(cell, 12);
         cell.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { openDay(dayFasts); }
+            public void onClick(View v) { openDay(d, dayFasts); }
         });
         return cell;
     }
 
-    /** One fast opens straight into the editor; several are listed first. */
-    private void openDay(final List<Db.Fast> dayFasts) {
-        if (dayFasts.size() == 1) {
-            a.push(new PastFastScreen(a, dayFasts.get(0)));
-            return;
-        }
-        String[] items = new String[dayFasts.size()];
-        for (int i = 0; i < items.length; i++) {
-            Db.Fast f = dayFasts.get(i);
-            items[i] = Ui.time(c, f.startAt) + " - " + Ui.time(c, f.endAt) + "  (" + FastingLogic.dur(f.endAt - f.startAt)
-                    + (f.met() ? ", goal met)" : ", ended early)");
-        }
-        new AlertDialog.Builder(c)
-                .setTitle("Fasts ending this day")
-                .setItems(items, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) { a.push(new PastFastScreen(a, dayFasts.get(w))); }
-                })
-                .show();
+    /** One fast opens straight into the editor; several are listed on DayFastsScreen first. */
+    private void openDay(LocalDate d, List<Db.Fast> dayFasts) {
+        if (dayFasts.size() == 1) a.push(new PastFastScreen(a, dayFasts.get(0)));
+        else a.push(new DayFastsScreen(a, d));
     }
 }
