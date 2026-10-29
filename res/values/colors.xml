@@ -1,0 +1,21 @@
+<resources>
+    <!-- Palette taken from the logo: royal blue, white, peach. Neutrals are blue-tinted. -->
+    <color name="primary">#2E5BFF</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="eat">#E0782F</color>
+    <color name="on_eat">#2B1503</color>
+    <color name="peach">#FFC48A</color>
+    <color name="train">#5E4BE3</color>
+    <color name="success">#1FA971</color>
+    <color name="error">#E04848</color>
+    <color name="bg">#F4F6FF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="outline">#E0E5FA</color>
+    <color name="text">#0F1A44</color>
+    <color name="text2">#5B6488</color>
+    <color name="protein">#2E5BFF</color>
+    <color name="carbs">#F0A453</color>
+    <color name="fat">#8E9AC8</color>
+    <color name="splash_bg">#FFFFFF</color>
+    <color name="brand_navy">#0F1A44</color>
+</resources>

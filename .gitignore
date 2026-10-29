@@ -33,3 +33,10 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Fastwell build (build.sh)
+out/
+# API 36 android.jar (53 MB) - download separately, see README
+sdk/
+# signing key - keep it private
+keystore/
