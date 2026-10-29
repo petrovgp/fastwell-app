@@ -2,19 +2,31 @@ package app.fastwell;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
-/** Completed fasts with streaks and stats; tap a fast to edit or delete it, or add a past one. */
+/** Completed fasts with streaks, stats and a month calendar; tap a day to edit or delete its fast, or add a past one; both open PastFastScreen. */
 final class FastHistoryScreen extends Screen {
+
+    private YearMonth month = YearMonth.now();
 
     FastHistoryScreen(MainActivity a) { super(a); }
 
@@ -23,8 +35,20 @@ final class FastHistoryScreen extends Screen {
 
     @Override
     View build() {
-        LinearLayout col = Ui.column(c, 24);
-        col.addView(backHeader(a, "Fasting history"));
+        // Fixed, non-scrolling layout: header, compact stats, then the calendar takes whatever height is left.
+        LinearLayout col = Ui.column(c, 12);
+        LinearLayout header = backHeader(a, "Fasting history");
+        Button add = Ui.tonal(c, "+  Add", R.color.primary);
+        add.setContentDescription("Add a past fast");
+        add.setMinHeight(Ui.dp(c, 36));
+        add.setMinimumHeight(Ui.dp(c, 36));
+        add.setPadding(Ui.dp(c, 14), 0, Ui.dp(c, 14), 0);
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { a.push(new PastFastScreen(a)); }
+        });
+        header.addView(add, Ui.lp(Ui.WRAP, Ui.dp(c, 36)));
+        col.addView(header);
 
         List<Db.Fast> fasts = db.completedFasts(500);
         List<long[]> marks = new ArrayList<long[]>();
@@ -38,11 +62,15 @@ final class FastHistoryScreen extends Screen {
         int[] st = FastingLogic.streaks(marks, LocalDate.now(), ZoneId.systemDefault());
 
         LinearLayout stats = Ui.card(c);
+        int pad = Ui.dp(c, 12);
+        stats.setPadding(pad, Ui.dp(c, 8), pad, Ui.dp(c, 8));
         LinearLayout r1 = Ui.hbox(c);
         r1.addView(stat("Current streak", st[0] + (st[0] == 1 ? " day" : " days")), Ui.lp(0, Ui.WRAP, 1f));
         r1.addView(stat("Best streak", st[1] + (st[1] == 1 ? " day" : " days")), Ui.lp(0, Ui.WRAP, 1f));
         stats.addView(r1);
-        stats.addView(Ui.divider(c));
+        View div = Ui.divider(c);
+        ((LinearLayout.LayoutParams) div.getLayoutParams()).setMargins(0, Ui.dp(c, 4), 0, Ui.dp(c, 4));
+        stats.addView(div);
         LinearLayout r2 = Ui.hbox(c);
         r2.addView(stat("Fasts", String.valueOf(fasts.size())), Ui.lp(0, Ui.WRAP, 1f));
         r2.addView(stat("Goal met", fasts.isEmpty() ? "-" : Math.round(100.0 * met / fasts.size()) + "%"), Ui.lp(0, Ui.WRAP, 1f));
@@ -50,39 +78,14 @@ final class FastHistoryScreen extends Screen {
         stats.addView(r2);
         col.addView(stats);
 
-        Button add = Ui.tonal(c, "Add a past fast", R.color.primary);
-        add.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Db.Fast f = new Db.Fast();
-                long now = System.currentTimeMillis();
-                f.goalMin = prefs.plan().goalMinutes();
-                f.plan = prefs.plan().id;
-                f.endAt = now - 60000;
-                f.startAt = f.endAt - f.goalMs();
-                editDialog(f, true);
-            }
-        });
-        col.addView(add, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 48), 0, 0, 0, 8));
-
-        if (fasts.isEmpty()) {
-            TextView t = Ui.muted(c, "Your completed fasts show here.");
-            t.setPadding(Ui.dp(c, 4), Ui.dp(c, 16), 0, 0);
-            col.addView(t);
-        } else {
-            col.addView(Ui.sectionTitle(c, "All fasts"));
-            LinearLayout list = Ui.card(c);
-            list.setPadding(Ui.dp(c, 8), Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 4));
-            for (int i = 0; i < fasts.size(); i++) {
-                if (i > 0) list.addView(Ui.divider(c));
-                list.addView(row(fasts.get(i)));
-            }
-            col.addView(list);
-        }
-        return Ui.scroll(c, col);
+        TextView calTitle = Ui.sectionTitle(c, "Calendar");
+        calTitle.setPadding(Ui.dp(c, 4), Ui.dp(c, 4), 0, Ui.dp(c, 6));
+        col.addView(calTitle);
+        col.addView(calendar(fasts), Ui.lp(Ui.MATCH, 0, 1f));
+        return col;
     }
 
-    static View backHeader(final MainActivity a, String title) {
+    static LinearLayout backHeader(final MainActivity a, String title) {
         LinearLayout h = Ui.hbox(a);
         h.setPadding(0, Ui.dp(a, 8), 0, Ui.dp(a, 8));
         ImageView back = Ui.iconButton(a, R.drawable.ic_left, R.color.text, "Back");
@@ -100,95 +103,140 @@ final class FastHistoryScreen extends Screen {
     private View stat(String label, String value) {
         LinearLayout v = Ui.vbox(c);
         v.addView(Ui.muted(c, label));
-        v.addView(Ui.big(c, value, 20, R.color.text));
+        v.addView(Ui.big(c, value, 18, R.color.text));
         return v;
     }
 
-    private View row(final Db.Fast f) {
-        LinearLayout r = Ui.hbox(c);
-        r.setPadding(Ui.dp(c, 8), Ui.dp(c, 10), Ui.dp(c, 8), Ui.dp(c, 10));
-        LinearLayout left = Ui.vbox(c);
-        left.addView(Ui.text(c, Ui.dateTime(c, f.startAt), 15, R.color.text, true));
-        String sub = "to " + Ui.dateTime(c, f.endAt) + "  -  goal " + FastingLogic.dur(f.goalMs());
-        if (f.mood > 0) sub += "  -  " + FastScreen.MOODS[f.mood - 1];
-        left.addView(Ui.muted(c, sub));
-        if (!f.note.isEmpty()) left.addView(Ui.text(c, f.note, 13, R.color.text, false));
-        r.addView(left, Ui.lp(0, Ui.WRAP, 1f));
-        LinearLayout right = Ui.vbox(c);
-        right.setGravity(android.view.Gravity.END);
-        right.addView(Ui.big(c, FastingLogic.dur(f.endAt - f.startAt), 16, R.color.text));
-        right.addView(Ui.chip(c, f.met() ? "Goal met" : "Ended early", f.met() ? R.color.success : R.color.text2));
-        r.addView(right);
-        Ui.clickable(r, 8);
-        r.setOnClickListener(new View.OnClickListener() {
+    /** Month grid; each day shows a green check if a fast ending that day met its goal, yellow if it ended early. */
+    private View calendar(List<Db.Fast> fasts) {
+        ZoneId zone = ZoneId.systemDefault();
+        final Map<LocalDate, List<Db.Fast>> byDay = new HashMap<LocalDate, List<Db.Fast>>();
+        for (Db.Fast f : fasts) {
+            LocalDate d = Instant.ofEpochMilli(f.endAt).atZone(zone).toLocalDate();
+            List<Db.Fast> l = byDay.get(d);
+            if (l == null) byDay.put(d, l = new ArrayList<Db.Fast>());
+            l.add(f);
+        }
+
+        LinearLayout card = Ui.card(c);
+        card.setPadding(Ui.dp(c, 8), Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 10));
+
+        final YearMonth now = YearMonth.now();
+        LinearLayout nav = Ui.hbox(c);
+        ImageView prev = Ui.iconButton(c, R.drawable.ic_left, R.color.text, "Previous month");
+        prev.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { editDialog(f, false); }
+            public void onClick(View v) { month = month.minusMonths(1); a.refresh(); }
         });
-        return r;
+        ImageView next = Ui.iconButton(c, R.drawable.ic_right, R.color.text, "Next month");
+        boolean canNext = month.isBefore(now);
+        next.setEnabled(canNext);
+        next.setAlpha(canNext ? 1f : 0.3f);
+        next.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { month = month.plusMonths(1); a.refresh(); }
+        });
+        TextView title = Ui.text(c, month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())), 17, R.color.text, true);
+        title.setGravity(Gravity.CENTER);
+        nav.addView(prev);
+        nav.addView(title, Ui.lp(0, Ui.WRAP, 1f));
+        nav.addView(next);
+        card.addView(nav);
+
+        DayOfWeek first = WeekFields.of(Locale.getDefault()).getFirstDayOfWeek();
+        LinearLayout names = Ui.hbox(c);
+        names.setPadding(0, Ui.dp(c, 2), 0, Ui.dp(c, 2));
+        for (int i = 0; i < 7; i++) {
+            TextView t = Ui.text(c, first.plus(i).getDisplayName(TextStyle.SHORT, Locale.getDefault()), 12, R.color.text2, true);
+            t.setGravity(Gravity.CENTER);
+            names.addView(t, Ui.lp(0, Ui.WRAP, 1f));
+        }
+        card.addView(names);
+
+        LocalDate today = LocalDate.now();
+        int lead = (month.atDay(1).getDayOfWeek().getValue() - first.getValue() + 7) % 7;
+        int cells = (lead + month.lengthOfMonth() + 6) / 7 * 7;
+        LinearLayout week = null;
+        for (int i = 0; i < cells; i++) {
+            // Week rows split the card's spare height, so the grid stretches or shrinks to fit the screen.
+            if (i % 7 == 0) {
+                week = Ui.hbox(c);
+                card.addView(week, Ui.lp(Ui.MATCH, 0, 1f));
+            }
+            int day = i - lead + 1;
+            if (day < 1 || day > month.lengthOfMonth()) {
+                week.addView(new View(c), Ui.lp(0, Ui.MATCH, 1f));
+            } else {
+                LocalDate d = month.atDay(day);
+                week.addView(dayCell(d, today, byDay.get(d)), Ui.lp(0, Ui.MATCH, 1f));
+            }
+        }
+
+        LinearLayout legend = Ui.hbox(c);
+        legend.setGravity(Gravity.CENTER);
+        legend.setPadding(0, Ui.dp(c, 8), 0, 0);
+        legend.addView(Ui.icon(c, R.drawable.ic_day_met, R.color.success, 16));
+        legend.addView(Ui.hspace(c, 6));
+        legend.addView(Ui.muted(c, "Goal met"));
+        legend.addView(Ui.hspace(c, 20));
+        legend.addView(Ui.icon(c, R.drawable.ic_day_partial, R.color.warn, 16));
+        legend.addView(Ui.hspace(c, 6));
+        legend.addView(Ui.muted(c, "Ended early"));
+        card.addView(legend);
+        if (fasts.isEmpty()) {
+            TextView t = Ui.muted(c, "Your completed fasts show here.");
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(0, Ui.dp(c, 4), 0, 0);
+            card.addView(t);
+        }
+        return card;
     }
 
-    private void editDialog(final Db.Fast f, final boolean isNew) {
-        LinearLayout body = Ui.dialogBody(c);
-        final Button start = Ui.tonal(c, "", R.color.primary);
-        final Button end = Ui.tonal(c, "", R.color.primary);
-        final TextView length = Ui.muted(c, "");
-        final Runnable update = new Runnable() {
-            @Override
-            public void run() {
-                start.setText("Start: " + Ui.dateTime(c, f.startAt));
-                end.setText("End: " + Ui.dateTime(c, f.endAt));
-                length.setText("Length " + FastingLogic.dur(f.endAt - f.startAt) + "  -  goal " + FastingLogic.dur(f.goalMs()));
-            }
-        };
-        update.run();
-        start.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                a.pickDateTime(f.startAt, new MainActivity.LongCb() {
-                    @Override
-                    public void on(long t) { f.startAt = t; update.run(); }
-                });
-            }
-        });
-        end.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                a.pickDateTime(f.endAt, new MainActivity.LongCb() {
-                    @Override
-                    public void on(long t) { f.endAt = t; update.run(); }
-                });
-            }
-        });
-        body.addView(start, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 44), 0, 8, 0, 8));
-        body.addView(end, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 44), 0, 0, 0, 8));
-        body.addView(length);
-
-        AlertDialog.Builder b = new AlertDialog.Builder(c)
-                .setTitle(isNew ? "Add past fast" : "Edit fast")
-                .setView(body)
-                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        if (f.endAt <= f.startAt) { Ui.toast(c, "End must be after the start"); return; }
-                        if (f.endAt > System.currentTimeMillis() + 60000) { Ui.toast(c, "End can't be in the future"); return; }
-                        if (isNew) db.insertFast(f); else db.updateFast(f);
-                        a.refresh();
-                    }
-                })
-                .setNegativeButton("Cancel", null);
-        if (!isNew) {
-            b.setNeutralButton("Delete", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    db.deleteFast(f.id);
-                    a.refresh();
-                    a.snack("Fast deleted", new Runnable() {
-                        @Override
-                        public void run() { db.insertFast(f); }
-                    });
-                }
-            });
+    private View dayCell(LocalDate d, LocalDate today, final List<Db.Fast> dayFasts) {
+        LinearLayout cell = Ui.vbox(c);
+        cell.setGravity(Gravity.CENTER);
+        boolean isToday = d.equals(today);
+        TextView num = Ui.big(c, String.valueOf(d.getDayOfMonth()), 13, isToday ? R.color.primary : R.color.text);
+        num.setGravity(Gravity.CENTER);
+        if (d.isAfter(today)) num.setAlpha(0.35f);
+        if (isToday) num.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        cell.addView(num);
+        if (dayFasts == null) {
+            cell.addView(Ui.space(c, 22));
+            return cell;
         }
-        b.show();
+        boolean met = false;
+        for (Db.Fast f : dayFasts) met |= f.met();
+        ImageView ic = Ui.icon(c, met ? R.drawable.ic_day_met : R.drawable.ic_day_partial, met ? R.color.success : R.color.warn, 20);
+        ic.setLayoutParams(Ui.lpm(c, Ui.dp(c, 20), Ui.dp(c, 20), 0, 2, 0, 0));
+        cell.addView(ic);
+        cell.setContentDescription(Ui.dayLabel(d) + ", " + (met ? "goal met" : "ended early"));
+        Ui.clickable(cell, 12);
+        cell.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { openDay(dayFasts); }
+        });
+        return cell;
+    }
+
+    /** One fast opens straight into the editor; several are listed first. */
+    private void openDay(final List<Db.Fast> dayFasts) {
+        if (dayFasts.size() == 1) {
+            a.push(new PastFastScreen(a, dayFasts.get(0)));
+            return;
+        }
+        String[] items = new String[dayFasts.size()];
+        for (int i = 0; i < items.length; i++) {
+            Db.Fast f = dayFasts.get(i);
+            items[i] = Ui.time(c, f.startAt) + " - " + Ui.time(c, f.endAt) + "  (" + FastingLogic.dur(f.endAt - f.startAt)
+                    + (f.met() ? ", goal met)" : ", ended early)");
+        }
+        new AlertDialog.Builder(c)
+                .setTitle("Fasts ending this day")
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) { a.push(new PastFastScreen(a, dayFasts.get(w))); }
+                })
+                .show();
     }
 }

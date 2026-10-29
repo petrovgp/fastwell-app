@@ -8,6 +8,7 @@
     <color name="train">#5E4BE3</color>
     <color name="success">#1FA971</color>
     <color name="error">#E04848</color>
+    <color name="warn">#E3A008</color>
     <color name="bg">#F4F6FF</color>
     <color name="surface">#FFFFFF</color>
     <color name="outline">#E0E5FA</color>
