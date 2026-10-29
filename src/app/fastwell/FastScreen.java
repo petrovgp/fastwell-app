@@ -64,25 +64,29 @@ final class FastScreen extends Screen {
         center.addView(stateLabel);
         center.addView(elapsed);
         center.addView(remaining);
-        ringBox.addView(center, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+
+        // Tapping the timer does the same as the main button below.
+        View.OnClickListener toggle = active != null
+                ? new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) { endFastDialog(a, active); }
+                }
+                : new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) { a.startFast(); }
+                };
+        int pad = Ui.dp(c, 16);
+        center.setPadding(pad, pad, pad, pad);
+        Ui.clickable(center, 24);
+        center.setOnClickListener(toggle);
+        center.setContentDescription(active != null ? "End fast" : "Start " + plan.fastHours + "h fast");
+        ringBox.addView(center, new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER));
         col.addView(ringBox, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 280), 0, 4, 0, 12));
 
         col.addView(timesCard(plan));
 
-        Button main;
-        if (active != null) {
-            main = Ui.primary(c, "End fast", R.color.primary);
-            main.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { endFastDialog(a, active); }
-            });
-        } else {
-            main = Ui.primary(c, "Start " + plan.fastHours + "h fast", R.color.primary);
-            main.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { a.startFast(); }
-            });
-        }
+        Button main = Ui.primary(c, active != null ? "End fast" : "Start " + plan.fastHours + "h fast", R.color.primary);
+        main.setOnClickListener(toggle);
         col.addView(main, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 56), 0, 0, 0, 12));
 
         col.addView(stageCard());
