@@ -85,12 +85,12 @@ public class MainActivity extends Activity {
         public void run() {
             if (isFinishing() || !(screen instanceof LaunchScreen)) return;
             if (!prefs.onboarded()) {
-                dropIn(new OnboardingScreen(MainActivity.this));
+                slideIn(new OnboardingScreen(MainActivity.this));
                 CrashLog.showIfAny(MainActivity.this);
             } else {
                 tab = TAB_TODAY;
                 stack.clear();
-                dropIn(createTab(TAB_TODAY));
+                slideIn(createTab(TAB_TODAY));
                 if (!CrashLog.showIfAny(MainActivity.this)) maybeAskNotificationPermission();
             }
         }
@@ -355,14 +355,14 @@ public class MainActivity extends Activity {
         updateBack();
     }
 
-    /** Shows a screen that slides down from the top over the current one. */
-    private void dropIn(Screen s) {
+    /** Shows a screen that slides in from the left over the current one. */
+    private void slideIn(Screen s) {
         screen = s;
         final View old = content.getChildCount() > 0 ? content.getChildAt(content.getChildCount() - 1) : null;
         final View v = s.build();
         if (v.getBackground() == null) v.setBackgroundColor(Ui.col(this, R.color.bg));
-        float h = Math.max(content.getHeight(), getWindow().getDecorView().getHeight());
-        v.setTranslationY(-h);
+        float w = Math.max(content.getWidth(), getWindow().getDecorView().getWidth());
+        v.setTranslationX(-w);
         content.addView(v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         v.setElevation(Ui.dp(this, 4));
         buildNav();
@@ -370,8 +370,8 @@ public class MainActivity extends Activity {
         applyBars(s.lightBars());
         s.tick();
         updateBack();
-        if (old != null) old.animate().translationY(h * 0.18f).alpha(0.4f).setDuration(650).start();
-        v.animate().translationY(0).setDuration(650)
+        if (old != null) old.animate().translationX(w * 0.18f).alpha(0.4f).setDuration(650).start();
+        v.animate().translationX(0).setDuration(650)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(2.2f))
                 .withEndAction(new Runnable() {
                     @Override
