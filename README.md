@@ -8,14 +8,18 @@ Intermittent fasting timer + calorie journal + workout journal for Android 8.0+ 
 Copy `Fastwell-1.0.0.apk` to the phone, open it, and allow "Install unknown apps" for the app you opened it from.
 
 ## Build
-Needs a JDK, `aapt`, `dalvik-exchange` (dx), `zipalign`, `apksigner`, the API 23 platform (Debian/Ubuntu: `apt install aapt apksigner zipalign dalvik-exchange android-sdk-platform-23`) and an API 36 `android.jar` at `sdk/android-36.jar`.
+Works on Debian 12/13, Ubuntu 22.04+ and WSL. Install a JDK and three Android tools:
+
+    sudo apt install default-jdk-headless aapt zipalign apksigner
+
+Then:
 
     ./build.sh          # -> out/Fastwell-1.0.0.apk
     tests/run.sh        # JVM tests for the fasting/calorie/streak logic
 
-`sdk/android-36.jar` is not in the repo (53 MB). Get it from https://github.com/Reginer/aosp-android-jar (`android-36/android.jar`) and place it at `sdk/android-36.jar`.
+`dx` and the API 23 framework resources are bundled in `tools/` (see `tools/README.md`), so no distro Android SDK packages are needed. On the first run `build.sh` downloads the API 36 `android.jar` (~53 MB, from https://github.com/Reginer/aosp-android-jar) to `sdk/android-36.jar`.
 
-The signing key `keystore/fastwell.jks` is deliberately not in the repo. Keep your own copy safe: Android only installs an update over the app if it is signed with the same key. Without it, `build.sh` creates a new key, and that build won't install over existing copies.
+The signing key `keystore/fastwell.jks` is deliberately not in the repo. Put your copy there before building: Android only installs an update over the app if it is signed with the same key. Without it, `build.sh` creates a new key, and that build won't install over existing copies.
 
 ## Code map
 - `MainActivity` – shell, bottom nav, edge-to-edge insets, predictive back (Android 16), snackbar, backup import/export
