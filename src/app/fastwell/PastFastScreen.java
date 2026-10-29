@@ -161,7 +161,7 @@ final class PastFastScreen extends Screen {
         return root;
     }
 
-    /** Asks before deleting, with the same split Delete / primary button row as the bottom of this screen. */
+    /** Asks before deleting, with a split Cancel / Delete button row. */
     private void confirmDelete() {
         LinearLayout body = Ui.dialogBody(c);
         TextView msg = Ui.body(c, "The " + FastingLogic.dur(original.endAt - original.startAt) + " fast from "
@@ -172,9 +172,9 @@ final class PastFastScreen extends Screen {
         buttons.setPadding(0, Ui.dp(c, 20), 0, Ui.dp(c, 20));
         Button delete = Ui.tonal(c, "Delete", R.color.error);
         Button cancel = Ui.primary(c, "Cancel", R.color.primary);
-        buttons.addView(delete, Ui.lp(0, Ui.dp(c, 56), 1f));
-        buttons.addView(Ui.hspace(c, 12));
         buttons.addView(cancel, Ui.lp(0, Ui.dp(c, 56), 1f));
+        buttons.addView(Ui.hspace(c, 12));
+        buttons.addView(delete, Ui.lp(0, Ui.dp(c, 56), 1f));
         body.addView(buttons, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         final AlertDialog dlg = new AlertDialog.Builder(c)
