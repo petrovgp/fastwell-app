@@ -76,7 +76,8 @@ final class FastScreen extends Screen {
         ringBox.addView(center, new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER));
         col.addView(ringBox, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 280), 0, 4, 0, 12));
 
-        col.addView(timesCard(plan));
+        View times = timesCard();
+        if (times != null) col.addView(times);
 
         Button main = Ui.primary(c, active != null ? "End fast" : "Start " + plan.fastHours + "h fast", R.color.primary);
         main.setOnClickListener(toggle);
@@ -87,7 +88,8 @@ final class FastScreen extends Screen {
         return Ui.scroll(c, col);
     }
 
-    private View timesCard(FastingLogic.Plan plan) {
+    /** Start/goal times of the running fast, or the last completed fast; null when there is neither. */
+    private View timesCard() {
         LinearLayout card = Ui.card(c);
         LinearLayout row = Ui.hbox(c);
         if (active != null) {
@@ -99,14 +101,10 @@ final class FastScreen extends Screen {
                     Ui.lp(0, Ui.WRAP, 1f));
         } else {
             Db.Fast last = db.lastCompletedFast();
-            if (last != null) {
-                row.addView(timeCell("Last fast", FastingLogic.dur(last.endAt - last.startAt), last.met() ? "Goal met" : "Ended early", null),
-                        Ui.lp(0, Ui.WRAP, 1f));
-                row.addView(timeCell("Ended", Ui.dateTime(c, last.endAt), "", null), Ui.lp(0, Ui.WRAP, 1f));
-            } else {
-                row.addView(timeCell("Plan", plan.name.replace("  ", " "), plan.fastHours + "h fasting, " + plan.eatHours() + "h eating", null),
-                        Ui.lp(0, Ui.WRAP, 1f));
-            }
+            if (last == null) return null;
+            row.addView(timeCell("Last fast", FastingLogic.dur(last.endAt - last.startAt), last.met() ? "Goal met" : "Ended early", null),
+                    Ui.lp(0, Ui.WRAP, 1f));
+            row.addView(timeCell("Ended", Ui.dateTime(c, last.endAt), "", null), Ui.lp(0, Ui.WRAP, 1f));
         }
         card.addView(row);
         return card;
