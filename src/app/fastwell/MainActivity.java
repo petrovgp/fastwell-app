@@ -288,6 +288,7 @@ public class MainActivity extends Activity {
             pill.addView(icon, ip);
             item.addView(pill, Ui.lp(Ui.dp(this, 60), Ui.dp(this, 32)));
             TextView label = Ui.text(this, TAB_LABELS[i], 12, on ? R.color.text : R.color.text2, on);
+            label.setGravity(Gravity.CENTER_HORIZONTAL);
             label.setPadding(0, Ui.dp(this, 4), 0, 0);
             item.addView(label);
             item.setContentDescription(TAB_LABELS[i]);

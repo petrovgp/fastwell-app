@@ -1,5 +1,6 @@
 package app.fastwell;
 
+import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,14 +26,6 @@ final class OnboardingScreen extends Screen {
     private String planId = "16:8";
     private int customHours = 16;
     private SettingsScreen.ProfileForm form;
-
-    private static final String[] PLAN_NOTES = {
-        "A gentle start: your overnight fast plus a little.",
-        "The most popular plan. Skip breakfast or late snacks.",
-        "Two meals inside a 6-hour window.",
-        "One main meal and a snack.",
-        "One meal a day. For experienced fasters.",
-    };
 
     OnboardingScreen(MainActivity a) { super(a); }
 
@@ -111,13 +104,13 @@ final class OnboardingScreen extends Screen {
         return bar;
     }
 
-    private TextView title(String s) {
+    static TextView title(Context c, String s) {
         TextView t = Ui.text(c, s, 28, R.color.text, true);
         t.setPadding(Ui.dp(c, 4), Ui.dp(c, 12), 0, Ui.dp(c, 4));
         return t;
     }
 
-    private TextView subtitle(String s) {
+    static TextView subtitle(Context c, String s) {
         TextView t = Ui.text(c, s, 15, R.color.text2, false);
         t.setPadding(Ui.dp(c, 4), 0, 0, Ui.dp(c, 16));
         return t;
@@ -131,8 +124,8 @@ final class OnboardingScreen extends Screen {
         logo.setContentDescription("Fastwell logo");
         LinearLayout.LayoutParams lp = Ui.lpm(c, Ui.dp(c, 64), Ui.dp(c, 64), 4, 16, 0, 4);
         col.addView(logo, lp);
-        col.addView(title("Welcome to Fastwell"));
-        col.addView(subtitle("Track your fasts, meals and workouts in one place."));
+        col.addView(title(c, "Welcome to Fastwell"));
+        col.addView(subtitle(c, "Track your fasts, meals and workouts in one place."));
 
         LinearLayout card = Ui.card(c);
         card.addView(Ui.text(c, "Before you start", 17, R.color.text, true));
@@ -179,64 +172,25 @@ final class OnboardingScreen extends Screen {
     // ---------- step 2 ----------
 
     private void plans(LinearLayout col) {
-        col.addView(title("Your fasting plan"));
-        col.addView(subtitle("How long do you want to fast each day? You can change this any time."));
-        // Cards restyle in place on tap; nothing is rebuilt, so the screen doesn't flicker or jump.
-        final List<Choice> group = new ArrayList<Choice>();
-        for (int i = 0; i < FastingLogic.PRESETS.length; i++) {
-            final FastingLogic.Plan p = FastingLogic.PRESETS[i];
-            String name = p.name.contains("  ") ? p.name.substring(p.name.indexOf("  ") + 2) : p.fastHours + " hour fast";
-            final Choice ch = Choice.card(c, p.ratio(), name, PLAN_NOTES[i]);
-            ch.onClick(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    planId = p.id;
-                    Choice.select(group, ch);
-                }
-            });
-            group.add(ch);
-            col.addView(ch.view, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 0, 0, 10));
-            if (p.id.equals(planId)) ch.setSelected(true);
-        }
-        final Choice custom = Choice.card(c, customLead(), "Custom", customNote());
-        custom.onClick(new View.OnClickListener() {
+        col.addView(title(c, "Your fasting plan"));
+        col.addView(subtitle(c, "How long do you want to fast each day? You can change this any time."));
+        PlanCards.add(a, col, planId, customHours, new PlanCards.Cb() {
             @Override
-            public void onClick(View v) {
-                HourDial.show(a, customHours, new HourDial.IntCb() {
-                    @Override
-                    public void on(int h) {
-                        customHours = h;
-                        planId = FastingLogic.CUSTOM;
-                        custom.setTexts(customLead(), customNote());
-                        Choice.select(group, custom);
-                    }
-                });
+            public void on(String id, int h) {
+                planId = id;
+                customHours = h;
             }
         });
-        group.add(custom);
-        col.addView(custom.view, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 0, 0, 10));
-        if (FastingLogic.CUSTOM.equals(planId)) custom.setSelected(true);
         TextView hint = Ui.muted(c, "New to fasting? 13:11 or 16:8 are good places to start.");
         hint.setPadding(Ui.dp(c, 4), Ui.dp(c, 4), 0, 0);
         col.addView(hint);
     }
 
-    private boolean customChosen() { return FastingLogic.CUSTOM.equals(planId); }
-
-    private String customLead() {
-        return customChosen() ? customHours + ":" + (24 - customHours) : "\u2022\u2022:\u2022\u2022";
-    }
-
-    private String customNote() {
-        return customChosen() ? customHours + "h fasting, " + (24 - customHours) + "h eating. Tap to adjust."
-                : "Pick your own fasting hours.";
-    }
-
     // ---------- step 3 ----------
 
     private void about(LinearLayout col) {
-        col.addView(title("About you"));
-        col.addView(subtitle("Used only to suggest a daily calorie target. Stored on this phone."));
+        col.addView(title(c, "About you"));
+        col.addView(subtitle(c, "Used only to suggest a daily calorie target. Stored on this phone."));
         if (form == null) form = new SettingsScreen.ProfileForm(a, prefs);
         ViewGroup parent = (ViewGroup) form.view.getParent();
         if (parent != null) parent.removeView(form.view);

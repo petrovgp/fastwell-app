@@ -52,7 +52,7 @@ final class SettingsScreen extends Screen {
         f.setPadding(Ui.dp(c, 8), Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 4));
         f.addView(row("Fasting plan", prefs.plan().name.replace("  ", " "), new Runnable() {
             @Override
-            public void run() { FastScreen.planDialog(a); }
+            public void run() { a.push(new PlanScreen(a)); }
         }));
         col.addView(f);
 

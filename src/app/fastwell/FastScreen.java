@@ -40,7 +40,7 @@ final class FastScreen extends Screen {
         Button planBtn = Ui.tonal(c, "Plan " + (active != null && !active.plan.isEmpty() ? FastingLogic.plan(active.plan, (int) (active.goalMin / 60)).ratio() : plan.ratio()), R.color.primary);
         planBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { planDialog(a); }
+            public void onClick(View v) { a.push(new PlanScreen(a)); }
         });
         top.addView(planBtn, Ui.lp(Ui.WRAP, Ui.dp(c, 40)));
         col.addView(top);
@@ -220,55 +220,6 @@ final class FastScreen extends Screen {
     }
 
     // ---------- shared dialogs ----------
-
-    static void planDialog(final MainActivity a) {
-        final Prefs prefs = a.prefs;
-        int n = FastingLogic.PRESETS.length;
-        String[] names = new String[n + 1];
-        int checked = n;
-        for (int i = 0; i < n; i++) {
-            FastingLogic.Plan p = FastingLogic.PRESETS[i];
-            names[i] = p.name + "   (" + p.fastHours + "h fast, " + p.eatHours() + "h eat)";
-            if (p.id.equals(prefs.planId())) checked = i;
-        }
-        names[n] = "Custom length...";
-        new AlertDialog.Builder(a)
-                .setTitle("Fasting plan")
-                .setSingleChoiceItems(names, checked, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int which) {
-                        d.dismiss();
-                        if (which < FastingLogic.PRESETS.length) {
-                            applyPlan(a, FastingLogic.PRESETS[which].id, prefs.customHours());
-                        } else {
-                            customHoursDialog(a);
-                        }
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private static void customHoursDialog(final MainActivity a) {
-        HourDial.show(a, Math.min(HourDial.MAX, a.prefs.customHours()), new HourDial.IntCb() {
-            @Override
-            public void on(int h) { applyPlan(a, FastingLogic.CUSTOM, h); }
-        });
-    }
-
-    private static void applyPlan(MainActivity a, String id, int customHours) {
-        a.prefs.setPlan(id, customHours);
-        FastingLogic.Plan p = a.prefs.plan();
-        Db.Fast f = a.db.activeFast();
-        if (f != null) {
-            f.goalMin = p.goalMinutes();
-            f.plan = p.id;
-            a.db.updateFast(f);
-        }
-        Notifier.refresh(a);
-        a.refresh();
-        a.snack("Plan set to " + p.ratio(), null);
-    }
 
     static void endFastDialog(final MainActivity a, final Db.Fast f) {
         final long[] end = {System.currentTimeMillis()};
