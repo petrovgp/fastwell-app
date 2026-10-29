@@ -34,10 +34,11 @@ final class Off {
             @Override
             public void run() {
                 try {
-                    String url = "https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=25"
-                            + "&fields=" + FIELDS + "&search_terms=" + URLEncoder.encode(query, "UTF-8");
+                    // The legacy cgi/search.pl endpoint now returns 503 for anonymous clients; use Search-a-licious.
+                    String url = "https://search.openfoodfacts.org/search?page_size=25"
+                            + "&fields=" + FIELDS + "&q=" + URLEncoder.encode(query, "UTF-8");
                     JSONObject o = new JSONObject(get(url));
-                    JSONArray arr = o.optJSONArray("products");
+                    JSONArray arr = o.optJSONArray("hits");
                     List<Db.Item> out = new ArrayList<Db.Item>();
                     if (arr != null) {
                         for (int i = 0; i < arr.length(); i++) {
@@ -97,7 +98,8 @@ final class Off {
         }
         Db.Item it = new Db.Item();
         it.name = name;
-        String brands = p.optString("brands", "");
+        JSONArray brandArr = p.optJSONArray("brands"); // array in search results, comma-separated string in the product API
+        String brands = brandArr != null ? brandArr.optString(0, "") : p.optString("brands", "");
         it.brand = brands.contains(",") ? brands.substring(0, brands.indexOf(',')).trim() : brands.trim();
         it.barcode = p.optString("code", "");
         it.kcal100 = kcal;
