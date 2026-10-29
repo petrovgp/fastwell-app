@@ -92,6 +92,50 @@ final class FastingLogic {
         return new int[] {protein, carbs, fat};
     }
 
+    /** Column order of a macro percent split. */
+    static final int CARBS = 0, PROTEIN = 1, FAT = 2;
+
+    /** Maintenance calories with a percent surplus (+) or deficit (-), rounded to 10 kcal. */
+    static int adjustedKcal(int maintenance, int percent) {
+        return (int) Math.round(maintenance * (100 + percent) / 1000.0) * 10;
+    }
+
+    /** {carbs g, protein g, fat g} for a calorie target split by {carbs, protein, fat} percent. */
+    static int[] macroGrams(int kcal, int[] pct) {
+        return new int[] {
+            (int) Math.round(kcal * pct[CARBS] / 400.0),
+            (int) Math.round(kcal * pct[PROTEIN] / 400.0),
+            (int) Math.round(kcal * pct[FAT] / 900.0),
+        };
+    }
+
+    /** {carbs, protein, fat} percent of calories for gram targets, summing to exactly 100. */
+    static int[] macroSplit(int proteinG, int carbsG, int fatG) {
+        double total = proteinG * 4.0 + carbsG * 4.0 + fatG * 9.0;
+        if (total <= 0) return new int[] {50, 25, 25};
+        int p = (int) Math.round(proteinG * 400.0 / total);
+        int f = Math.min(100 - p, (int) Math.round(fatG * 900.0 / total));
+        return new int[] {100 - p - f, p, f};
+    }
+
+    /**
+     * After pct[changed] was set, takes the difference from the other columns so the split sums to 100
+     * again: least recently changed column first ({@code order} lists columns least recent first, and
+     * {@code changed} is moved to its end).
+     */
+    static void rebalance(int[] pct, int changed, int[] order) {
+        int k = 0;
+        for (int col : order) if (col != changed) order[k++] = col;
+        order[k] = changed;
+        int diff = pct[0] + pct[1] + pct[2] - 100;
+        for (int i = 0; i < order.length - 1 && diff != 0; i++) {
+            int col = order[i];
+            int v = Math.max(0, Math.min(100, pct[col] - diff));
+            diff -= pct[col] - v;
+            pct[col] = v;
+        }
+    }
+
     /**
      * Streaks of consecutive days that contain at least one completed fast that met its goal,
      * attributed to the local day it ended. The current streak stays alive through today

@@ -2,6 +2,7 @@ package app.fastwell;
 
 import java.time.*;
 import java.util.*;
+import java.util.stream.IntStream;
 
 /** Plain-JVM tests for the pure logic (run: tests/run.sh). */
 public class FastingLogicTest {
@@ -36,6 +37,32 @@ public class FastingLogicTest {
         eq(120, m[0], "protein 1.6g/kg");
         eq(73, m[2], "fat 28%");
         eq((int) Math.round((2340 - 120 * 4 - 73 * 9) / 4.0), m[1], "carbs remainder");
+        // calorie adjustment and macro split
+        eq(2110, FastingLogic.adjustedKcal(2340, -10), "10% deficit rounds to 10");
+        eq(2690, FastingLogic.adjustedKcal(2340, 15), "15% surplus");
+        eq(2340, FastingLogic.adjustedKcal(2340, 0), "maintenance");
+        int[] mg = FastingLogic.macroGrams(2000, new int[]{50, 30, 20});
+        eq(250, mg[0], "carbs g");
+        eq(150, mg[1], "protein g");
+        eq(44, mg[2], "fat g");
+        int[] ms = FastingLogic.macroSplit(120, 220, 65);
+        eq(100, ms[0] + ms[1] + ms[2], "split sums to 100");
+        eq(25, ms[1], "protein share");
+        eq(30, ms[2], "fat share");
+        eq(100, IntStream.of(FastingLogic.macroSplit(0, 0, 0)).sum(), "empty split sums to 100");
+        int[] pct = {60, 25, 20}; // carbs just raised from 55 to 60
+        int[] order = {0, 2, 1};
+        FastingLogic.rebalance(pct, 0, order);
+        eq("[60, 25, 15]", Arrays.toString(pct), "takes from least recent other (fat)");
+        eq("[2, 1, 0]", Arrays.toString(order), "changed moves to most recent");
+        pct = new int[]{98, 5, 15}; // carbs raised from 80 to 98; fat only has 15 to give
+        order = new int[]{2, 1, 0};
+        FastingLogic.rebalance(pct, 0, order);
+        eq("[98, 2, 0]", Arrays.toString(pct), "spills over to the next column");
+        pct = new int[]{50, 25, 15}; // carbs lowered from 60 to 50
+        order = new int[]{2, 1, 0};
+        FastingLogic.rebalance(pct, 0, order);
+        eq("[50, 25, 25]", Arrays.toString(pct), "lowering gives to least recent other");
         // durations
         eq("16h 05m", FastingLogic.dur(16 * 3600000L + 5 * 60000L), "dur");
         eq("45m", FastingLogic.dur(45 * 60000L), "dur minutes");

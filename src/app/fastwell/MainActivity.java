@@ -419,7 +419,7 @@ public class MainActivity extends Activity {
 
     private boolean canHandleBack() {
         if (screen instanceof LaunchScreen) return false;
-        if (screen instanceof OnboardingScreen) return ((OnboardingScreen) screen).step > 0;
+        if (screen instanceof OnboardingScreen) return ((OnboardingScreen) screen).canGoBack();
         if (!stack.isEmpty()) return true;
         return prefs.onboarded() && tab != TAB_TODAY && !(screen instanceof OnboardingScreen);
     }

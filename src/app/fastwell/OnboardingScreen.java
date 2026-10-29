@@ -10,16 +10,22 @@ import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/** First run, three steps: 1 disclaimer, 2 fasting plan, 3 about you. Continue is pinned at the bottom. */
+/**
+ * First run, four steps: disclaimer, fasting plan, about you, daily target. Continue is pinned at the bottom.
+ * Settings opens about you or daily target on its own, with the same layout.
+ */
 final class OnboardingScreen extends Screen {
-    static final int STEPS = 3;
+    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3;
+    /** Largest calorie surplus or deficit, in percent. */
+    static final int ADJUST_MAX = 30;
 
+    private final int[] steps;
+    private final boolean settings;
     int step;
     private int direction;
     private boolean accepted;
@@ -27,7 +33,29 @@ final class OnboardingScreen extends Screen {
     private int customHours = 16;
     private SettingsScreen.ProfileForm form;
 
-    OnboardingScreen(MainActivity a) { super(a); }
+    private int adjust;
+    private int[] split;
+    /** Macro columns, least recently changed first; dragging one takes the difference from the others in this order. */
+    private final int[] order = {FastingLogic.CARBS, FastingLogic.FAT, FastingLogic.PROTEIN};
+    private Dial macroDial;
+    private TextView targetKcal, targetNote;
+    private final TextView[] grams = new TextView[3];
+
+    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS}, false, 0); }
+
+    private OnboardingScreen(MainActivity a, int[] steps, boolean settings, int step) {
+        super(a);
+        this.steps = steps;
+        this.settings = settings;
+        this.step = step;
+    }
+
+    /** A single step (ABOUT or TARGETS) opened from Settings. */
+    static OnboardingScreen fromSettings(MainActivity a, int kind) {
+        return new OnboardingScreen(a, new int[] {kind}, true, 0);
+    }
+
+    boolean canGoBack() { return settings || step > 0; }
 
     @Override
     boolean showsNav() { return false; }
@@ -38,22 +66,32 @@ final class OnboardingScreen extends Screen {
         root.setBackgroundColor(Ui.col(c, R.color.bg));
         root.addView(topBar());
 
-        LinearLayout col = Ui.column(c, 24);
-        if (step == 0) disclaimer(col);
-        else if (step == 1) plans(col);
-        else about(col);
-        ScrollView sv = Ui.scroll(c, col);
-        root.addView(sv, Ui.lp(Ui.MATCH, 0, 1f));
+        int kind = steps[step];
+        LinearLayout col;
+        if (kind == TARGETS) {
+            // Dials share the remaining height, so this step fits one screen without scrolling.
+            col = Ui.column(c, 4);
+            targets(col);
+            root.addView(col, Ui.lp(Ui.MATCH, 0, 1f));
+        } else {
+            col = Ui.column(c, 24);
+            if (kind == DISCLAIMER) disclaimer(col);
+            else if (kind == PLAN) plans(col);
+            else about(col);
+            root.addView(Ui.scroll(c, col), Ui.lp(Ui.MATCH, 0, 1f));
+        }
 
         LinearLayout bottom = Ui.vbox(c);
         bottom.setPadding(Ui.dp(c, 16), Ui.dp(c, 12), Ui.dp(c, 16), Ui.dp(c, 16));
         bottom.setBackgroundColor(Ui.col(c, R.color.bg));
-        final Button next = Ui.primary(c, step == STEPS - 1 ? "Get started" : "Continue", R.color.primary);
+        boolean last = step == steps.length - 1;
+        String label = !last ? "Continue" : !settings ? "Get started" : kind == ABOUT ? "Save profile" : "Save targets";
+        final Button next = Ui.primary(c, label, R.color.primary);
         next.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { next(); }
         });
-        if (step == 0) {
+        if (kind == DISCLAIMER) {
             setEnabled(next, accepted);
             gate = next;
         }
@@ -80,7 +118,7 @@ final class OnboardingScreen extends Screen {
     private View topBar() {
         LinearLayout bar = Ui.hbox(c);
         bar.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 16), Ui.dp(c, 4));
-        if (step > 0) {
+        if (canGoBack()) {
             ImageView back = Ui.iconButton(c, R.drawable.ic_left, R.color.text, "Back");
             back.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -90,8 +128,9 @@ final class OnboardingScreen extends Screen {
         } else {
             bar.addView(Ui.hspace(c, 44));
         }
+        if (settings) return bar; // a single step: no progress
         LinearLayout segs = Ui.hbox(c);
-        for (int i = 0; i < STEPS; i++) {
+        for (int i = 0; i < steps.length; i++) {
             View s = new View(c);
             s.setBackground(Ui.round(i <= step ? Ui.col(c, R.color.primary) : Ui.col(c, R.color.outline), Ui.dp(c, 3)));
             LinearLayout.LayoutParams lp = Ui.lp(0, Ui.dp(c, 6), 1f);
@@ -100,7 +139,7 @@ final class OnboardingScreen extends Screen {
         }
         bar.addView(segs, Ui.lpm(c, 0, Ui.WRAP, 8, 0, 12, 0));
         ((LinearLayout.LayoutParams) segs.getLayoutParams()).weight = 1f;
-        bar.addView(Ui.text(c, (step + 1) + " of " + STEPS, 13, R.color.text2, true));
+        bar.addView(Ui.text(c, (step + 1) + " of " + steps.length, 13, R.color.text2, true));
         return bar;
     }
 
@@ -116,7 +155,7 @@ final class OnboardingScreen extends Screen {
         return t;
     }
 
-    // ---------- step 1 ----------
+    // ---------- disclaimer ----------
 
     private void disclaimer(LinearLayout col) {
         ImageView logo = new ImageView(c);
@@ -169,7 +208,7 @@ final class OnboardingScreen extends Screen {
         col.addView(ack);
     }
 
-    // ---------- step 2 ----------
+    // ---------- fasting plan ----------
 
     private void plans(LinearLayout col) {
         col.addView(title(c, "Your fasting plan"));
@@ -186,38 +225,184 @@ final class OnboardingScreen extends Screen {
         col.addView(hint);
     }
 
-    // ---------- step 3 ----------
+    // ---------- about you ----------
 
     private void about(LinearLayout col) {
         col.addView(title(c, "About you"));
         col.addView(subtitle(c, "Used only to suggest a daily calorie target. Stored on this phone."));
-        if (form == null) form = new SettingsScreen.ProfileForm(a, prefs);
-        ViewGroup parent = (ViewGroup) form.view.getParent();
-        if (parent != null) parent.removeView(form.view);
+        SettingsScreen.ProfileForm f = form();
+        ViewGroup parent = (ViewGroup) f.view.getParent();
+        if (parent != null) parent.removeView(f.view);
         LinearLayout card = Ui.card(c);
-        card.addView(form.view);
+        card.addView(f.view);
         col.addView(card);
+    }
+
+    private SettingsScreen.ProfileForm form() {
+        if (form == null) form = new SettingsScreen.ProfileForm(a, prefs);
+        return form;
+    }
+
+    // ---------- daily target ----------
+
+    /** Faded maintenance on top, a surplus/deficit dial with the resulting target, then a carbs/protein/fat split dial. */
+    private void targets(LinearLayout col) {
+        initTargets();
+        final int maintenance = form().kcal();
+        col.addView(title(c, "Daily target"));
+        col.addView(subtitle(c, "Adjust calories, then split into macros."));
+
+        // Read-only, drawn faded like a dial's derived column.
+        int faded = Ui.alpha(Ui.col(c, R.color.text2), 0.5f);
+        LinearLayout base = Ui.vbox(c);
+        base.setGravity(Gravity.CENTER_HORIZONTAL);
+        base.setPadding(0, Ui.dp(c, 10), 0, Ui.dp(c, 10));
+        base.setBackground(Ui.round(Ui.alpha(Ui.col(c, R.color.text), 0.04f), Ui.dp(c, 20)));
+        base.addView(dialLabel("MAINTENANCE", true));
+        base.addView(amount(Ui.big(c, Ui.n0(maintenance), 28, R.color.text2), faded));
+        col.addView(base, Ui.lp(Ui.MATCH, Ui.WRAP));
+
+        LinearLayout row = Ui.hbox(c);
+        Dial adjustDial = new Dial(c);
+        adjustDial.addColumn("ADJUST", "%", -ADJUST_MAX, ADJUST_MAX, 5, 0, adjust);
+        adjustDial.setFormat(0, new Dial.Format() {
+            @Override
+            public String of(double v) { return (v > 0 ? "+" : "") + Math.round(v); }
+        });
+        adjustDial.setListener(new Dial.Listener() {
+            @Override
+            public void onChange(int column, double value) {
+                adjust = (int) Math.round(value);
+                updateTargets(maintenance);
+            }
+        });
+        row.addView(adjustDial, Ui.lp(0, Ui.MATCH, 1f));
+        row.addView(Ui.hspace(c, 10));
+        LinearLayout result = Ui.vbox(c);
+        result.setGravity(Gravity.CENTER);
+        result.setBackground(Ui.round(Ui.alpha(Ui.col(c, R.color.primary), Ui.night(c) ? 0.2f : 0.08f), Ui.dp(c, 20)));
+        result.addView(dialLabel("DAILY TARGET", false));
+        targetKcal = Ui.big(c, "", 28, R.color.text);
+        result.addView(amount(targetKcal, Ui.col(c, R.color.text)));
+        targetNote = Ui.muted(c, "");
+        targetNote.setGravity(Gravity.CENTER);
+        result.addView(targetNote);
+        row.addView(result, Ui.lp(0, Ui.MATCH, 1f));
+        col.addView(row, Ui.lpm(c, Ui.MATCH, 0, 0, 12, 0, 12));
+        ((LinearLayout.LayoutParams) row.getLayoutParams()).weight = 1f;
+
+        macroDial = new Dial(c);
+        macroDial.addColumn("CARBS", "%", 0, 100, 1, 0, split[FastingLogic.CARBS]);
+        macroDial.addColumn("PROTEIN", "%", 0, 100, 1, 0, split[FastingLogic.PROTEIN]);
+        macroDial.addColumn("FAT", "%", 0, 100, 1, 0, split[FastingLogic.FAT]);
+        macroDial.setListener(new Dial.Listener() {
+            @Override
+            public void onChange(int column, double value) {
+                split[column] = (int) Math.round(value);
+                FastingLogic.rebalance(split, column, order);
+                for (int i = 0; i < split.length; i++) if (i != column) macroDial.setValue(i, split[i]);
+                updateTargets(maintenance);
+            }
+        });
+        col.addView(macroDial, Ui.lp(Ui.MATCH, 0, 1.3f));
+        LinearLayout gramRow = Ui.hbox(c);
+        for (int i = 0; i < grams.length; i++) {
+            grams[i] = Ui.text(c, "", 15, R.color.text, true);
+            grams[i].setGravity(Gravity.CENTER);
+            gramRow.addView(grams[i], Ui.lp(0, Ui.WRAP, 1f));
+        }
+        col.addView(gramRow, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 8, 0, 0));
+        updateTargets(maintenance);
+    }
+
+    /** Starts from the saved split, else from the current targets, else (first run) from the suggested macros. */
+    private void initTargets() {
+        if (split != null) return;
+        if (prefs.hasMacroSplit()) {
+            adjust = prefs.kcalAdjust();
+            split = prefs.macroSplit();
+        } else if (prefs.onboarded()) {
+            double pct = prefs.kcalTarget() * 100.0 / form().kcal() - 100;
+            adjust = Math.max(-ADJUST_MAX, Math.min(ADJUST_MAX, (int) Math.round(pct / 5) * 5));
+            split = FastingLogic.macroSplit(prefs.proteinTarget(), prefs.carbsTarget(), prefs.fatTarget());
+        } else {
+            adjust = 0;
+            int[] m = FastingLogic.macroTargets(form().kcal(), form().weightV());
+            split = FastingLogic.macroSplit(m[0], m[1], m[2]);
+        }
+    }
+
+    private void updateTargets(int maintenance) {
+        int kcal = FastingLogic.adjustedKcal(maintenance, adjust);
+        targetKcal.setText(Ui.n0(kcal));
+        targetNote.setText(adjust == 0 ? "Maintenance" : Math.abs(adjust) + "% " + (adjust < 0 ? "deficit" : "surplus"));
+        int[] g = FastingLogic.macroGrams(kcal, split);
+        for (int i = 0; i < grams.length; i++) grams[i].setText(g[i] + " g");
+    }
+
+    private void saveTargets() {
+        int kcal = FastingLogic.adjustedKcal(form().kcal(), adjust);
+        int[] g = FastingLogic.macroGrams(kcal, split);
+        prefs.setTargets(kcal, g[FastingLogic.PROTEIN], g[FastingLogic.CARBS], g[FastingLogic.FAT]);
+        prefs.setMacroSplit(adjust, split);
+    }
+
+    /** Small spaced caps header, styled like a dial column label. */
+    private TextView dialLabel(String s, boolean faded) {
+        TextView t = Ui.text(c, s, 12, R.color.primary, true);
+        t.setLetterSpacing(0.08f);
+        t.setGravity(Gravity.CENTER);
+        if (faded) t.setTextColor(Ui.alpha(Ui.col(c, R.color.text2), 0.6f));
+        return t;
+    }
+
+    /** A big kcal number with a small unit after it, like a dial's selected value. */
+    private LinearLayout amount(TextView num, int color) {
+        LinearLayout r = Ui.hbox(c);
+        r.setGravity(Gravity.CENTER);
+        num.setTextColor(color);
+        r.addView(num);
+        TextView unit = Ui.text(c, "kcal", 14, R.color.text, true);
+        unit.setTextColor(color);
+        unit.setPadding(Ui.dp(c, 4), 0, 0, 0);
+        r.addView(unit);
+        return r;
     }
 
     // ---------- navigation ----------
 
     private void next() {
-        if (step == 0 && !accepted) return;
-        if (step < STEPS - 1) {
+        if (steps[step] == DISCLAIMER && !accepted) return;
+        if (step < steps.length - 1) {
             step++;
             direction = 1;
             a.rebuild();
             return;
         }
+        form().saveProfile();
+        if (settings) {
+            boolean retarget = steps[step] == TARGETS || prefs.hasMacroSplit();
+            // A new profile changes maintenance; keep the saved surplus/deficit and split on top of it.
+            if (retarget) {
+                initTargets();
+                saveTargets();
+            }
+            a.pop();
+            a.snack(retarget ? "Target set to " + Ui.n0(prefs.kcalTarget()) + " kcal" : "Profile saved", null);
+            return;
+        }
+        saveTargets();
         prefs.setPlan(planId, customHours);
-        if (form != null) form.save();
         prefs.setOnboarded(true);
         a.finishOnboarding();
     }
 
     void back() {
-        if (step == 0) return;
-        if (step == 2 && form != null) form.saveProfile();
+        if (step == 0) {
+            if (settings) a.pop();
+            return;
+        }
+        if (steps[step] == ABOUT && form != null) form.saveProfile();
         step--;
         direction = -1;
         a.rebuild();

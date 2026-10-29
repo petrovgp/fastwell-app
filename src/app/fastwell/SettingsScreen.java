@@ -7,11 +7,9 @@ import android.provider.Settings;
 import android.text.Editable;
 import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -37,13 +35,13 @@ final class SettingsScreen extends Screen {
         t.addView(row("Daily calories and macros", Ui.n0(prefs.kcalTarget()) + " kcal  -  P " + prefs.proteinTarget()
                 + " g, C " + prefs.carbsTarget() + " g, F " + prefs.fatTarget() + " g", new Runnable() {
             @Override
-            public void run() { targetsDialog(); }
+            public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.TARGETS)); }
         }));
         t.addView(Ui.divider(c));
         t.addView(row("Profile", (prefs.male() ? "Male" : "Female") + ", " + prefs.age() + " y, " + prefs.heightCm() + " cm, "
                 + Ui.n1(prefs.weightKg()) + " kg", new Runnable() {
             @Override
-            public void run() { profileDialog(a); }
+            public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.ABOUT)); }
         }));
         col.addView(t);
 
@@ -167,65 +165,6 @@ final class SettingsScreen extends Screen {
         return r;
     }
 
-    private void targetsDialog() {
-        LinearLayout body = Ui.dialogBody(c);
-        final EditText kcal = Ui.field(c, "kcal", Ui.NUM);
-        kcal.setText(String.valueOf(prefs.kcalTarget()));
-        final EditText p = Ui.field(c, "g", Ui.NUM);
-        p.setText(String.valueOf(prefs.proteinTarget()));
-        final EditText cb = Ui.field(c, "g", Ui.NUM);
-        cb.setText(String.valueOf(prefs.carbsTarget()));
-        final EditText f = Ui.field(c, "g", Ui.NUM);
-        f.setText(String.valueOf(prefs.fatTarget()));
-        body.addView(Ui.labeled(c, "Daily calories", kcal));
-        LinearLayout m = Ui.hbox(c);
-        m.addView(Ui.labeled(c, "Protein g", p), Ui.lp(0, Ui.WRAP, 1f));
-        m.addView(Ui.labeled(c, "Carbs g", cb), Ui.lp(0, Ui.WRAP, 1f));
-        m.addView(Ui.labeled(c, "Fat g", f), Ui.lp(0, Ui.WRAP, 1f));
-        body.addView(m);
-        new AlertDialog.Builder(c)
-                .setTitle("Targets")
-                .setView(body)
-                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        int k = (int) Ui.num(kcal, prefs.kcalTarget());
-                        if (k < 800 || k > 8000) { Ui.toast(c, "Calories should be between 800 and 8000"); return; }
-                        prefs.setTargets(k, (int) Ui.num(p, 0), (int) Ui.num(cb, 0), (int) Ui.num(f, 0));
-                        a.refresh();
-                    }
-                })
-                .setNeutralButton("From profile", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) { profileDialog(a); }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    /** Profile form with a live calorie estimate; also used during onboarding-like recalculation. */
-    static void profileDialog(final MainActivity a) {
-        final Prefs prefs = a.prefs;
-        final ProfileForm form = new ProfileForm(a, prefs);
-        ScrollView sv = new ScrollView(a);
-        LinearLayout body = Ui.dialogBody(a);
-        body.addView(form.view);
-        sv.addView(body);
-        new AlertDialog.Builder(a)
-                .setTitle("Profile")
-                .setView(sv)
-                .setPositiveButton("Save and update targets", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        form.save();
-                        a.refresh();
-                        a.snack("Target set to " + Ui.n0(prefs.kcalTarget()) + " kcal", null);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
     /** Sex toggle, age/height/weight dial and activity cards, with a live Mifflin-St Jeor estimate. */
     static final class ProfileForm {
         final LinearLayout view;
@@ -297,7 +236,7 @@ final class SettingsScreen extends Screen {
             LinearLayout est = Ui.vbox(c);
             est.setPadding(Ui.dp(c, 16), Ui.dp(c, 12), Ui.dp(c, 16), Ui.dp(c, 12));
             est.setBackground(Ui.round(Ui.alpha(Ui.col(c, R.color.primary), Ui.night(c) ? 0.2f : 0.08f), Ui.dp(c, 14)));
-            est.addView(Ui.muted(c, "Suggested daily target"));
+            est.addView(Ui.muted(c, "Maintenance calories"));
             estimate = Ui.big(c, "", 24, R.color.text);
             est.addView(estimate);
             view.addView(est, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 6, 0, 4));
@@ -321,14 +260,8 @@ final class SettingsScreen extends Screen {
 
         void update() { estimate.setText(Ui.n0(kcal()) + " kcal / day"); }
 
-        /** Keeps chosen values without changing targets (used when stepping back in onboarding). */
+        /** Saves the profile; targets are set on the daily target step. */
         void saveProfile() { prefs.setProfile(isMale, ageV(), heightV(), weightV(), activityV()); }
 
-        void save() {
-            saveProfile();
-            int k = kcal();
-            int[] m = FastingLogic.macroTargets(k, weightV());
-            prefs.setTargets(k, m[0], m[1], m[2]);
-        }
     }
 }

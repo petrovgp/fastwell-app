@@ -30,6 +30,20 @@ final class Prefs {
                 .putInt("carbs", carbs).putInt("fat", fat).apply();
     }
 
+    /** True once targets were set as a surplus/deficit and a percent split (the daily target step). */
+    boolean hasMacroSplit() { return p.contains("pct_carbs"); }
+    int kcalAdjust() { return p.getInt("kcal_adjust", 0); }
+
+    /** {carbs, protein, fat} percent of calories. */
+    int[] macroSplit() {
+        return new int[] {p.getInt("pct_carbs", 50), p.getInt("pct_protein", 25), p.getInt("pct_fat", 25)};
+    }
+
+    void setMacroSplit(int kcalAdjust, int[] pct) {
+        p.edit().putInt("kcal_adjust", kcalAdjust).putInt("pct_carbs", pct[FastingLogic.CARBS])
+                .putInt("pct_protein", pct[FastingLogic.PROTEIN]).putInt("pct_fat", pct[FastingLogic.FAT]).apply();
+    }
+
     String planId() { return p.getString("plan", "16:8"); }
     int customHours() { return p.getInt("custom_hours", 16); }
 
