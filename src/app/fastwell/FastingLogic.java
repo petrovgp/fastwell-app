@@ -188,7 +188,9 @@ final class FastingLogic {
         return 3;
     }
 
-    static final String[] MEALS = {"Breakfast", "Lunch", "Dinner", "Snacks"};
+    static final String[] MEALS = {"Breakfast", "Lunch", "Dinner", "Snacks", "Water"};
+    /** Index in MEALS of the water category; the slots before it are food meals. */
+    static final int WATER = 4;
 
     /** Hours of fasting attributed to each of the given days (by end day). */
     static double[] fastingHoursPerDay(List<long[]> startEnd, List<LocalDate> days, ZoneId zone) {

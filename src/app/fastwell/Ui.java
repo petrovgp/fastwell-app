@@ -44,6 +44,12 @@ final class Ui {
 
     static int alpha(int color, float a) { return (color & 0x00FFFFFF) | (Math.round(a * 255) << 24); }
 
+    /** Darkens a color by scaling its RGB channels by f (0..1), keeping alpha. */
+    static int shade(int color, float f) {
+        int r = Math.round(((color >> 16) & 0xFF) * f), g = Math.round(((color >> 8) & 0xFF) * f), b = Math.round((color & 0xFF) * f);
+        return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
+    }
+
     static GradientDrawable round(int fill, float radiusPx) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(fill);
@@ -201,10 +207,16 @@ final class Ui {
     }
 
     static Button fab(Context c, String label, int colorRes) {
-        Button b = button(c, "+  " + label, col(c, colorRes), onColor(c, colorRes), 0);
-        b.setBackground(ripple(c, round(col(c, colorRes), dp(c, 18)), dp(c, 18)));
-        b.setElevation(dp(c, 6));
+        Button b = fabShaped(c, "+  " + label, col(c, colorRes), onColor(c, colorRes));
         b.setLayoutParams(fabParams(c));
+        return b;
+    }
+
+    /** A button with the FAB's shape and elevation but no layout params. */
+    static Button fabShaped(Context c, String label, int bg, int fg) {
+        Button b = button(c, label, bg, fg, 0);
+        b.setBackground(ripple(c, round(bg, dp(c, 18)), dp(c, 18)));
+        b.setElevation(dp(c, 6));
         return b;
     }
 

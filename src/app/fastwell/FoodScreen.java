@@ -7,6 +7,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
@@ -25,11 +26,14 @@ import java.util.List;
 /** Calorie journal for the selected day, grouped by meal, plus the add-food flow. */
 final class FoodScreen extends Screen {
 
+    private static final int DIAL_H = 48, DIAL_GAP = 12;
+    private FrameLayout dial;
+
     FoodScreen(MainActivity a) { super(a); }
 
     @Override
     View build() {
-        FrameLayout root = new FrameLayout(c);
+        final FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Food", "Calories and macros"));
         col.addView(a.dateStrip());
@@ -59,12 +63,17 @@ final class FoodScreen extends Screen {
         sum.addView(TodayScreen.macroRow(a, "Fat", t[3], prefs.fatTarget(), R.color.fat));
         col.addView(sum);
 
-        for (int m = 0; m < 4; m++) {
+        for (int m = 0; m < FastingLogic.MEALS.length; m++) {
             final int meal = m;
-            double kcal = 0;
-            for (Db.Food f : foods) if (f.meal == m) kcal += f.kcal;
+            double kcal = 0, ml = 0;
+            for (Db.Food f : foods) {
+                if (f.meal != m) continue;
+                kcal += f.kcal;
+                ml += millilitres(f.amount);
+            }
+            String total = m == FastingLogic.WATER ? (ml > 0 ? Ui.n0(ml) + " ml" : "") : (kcal > 0 ? Ui.n0(kcal) + " kcal" : "");
             LinearLayout head = Ui.hbox(c);
-            TextView title = Ui.sectionTitle(c, FastingLogic.MEALS[m] + (kcal > 0 ? "  -  " + Ui.n0(kcal) + " kcal" : ""));
+            TextView title = Ui.sectionTitle(c, FastingLogic.MEALS[m] + (total.isEmpty() ? "" : "  -  " + total));
             head.addView(title, Ui.lp(0, Ui.WRAP, 1f));
             ImageView add = Ui.iconButton(c, R.drawable.ic_add, R.color.eat, "Add to " + FastingLogic.MEALS[m]);
             add.setOnClickListener(new View.OnClickListener() {
@@ -96,10 +105,14 @@ final class FoodScreen extends Screen {
             col.addView(card);
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        Button fab = Ui.fab(c, "Add food", R.color.eat);
+        final Button fab = Ui.fab(c, "Add food", R.color.eat);
+        dial = null;
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { openAdd(-1); }
+            public void onClick(View v) {
+                if (dial != null) closeDial();
+                else openDial(root, fab);
+            }
         });
         root.addView(fab);
         return root;
@@ -128,7 +141,108 @@ final class FoodScreen extends Screen {
         return r;
     }
 
-    void openAdd(int meal) { new AddFood(meal); }
+    // ---------- category speed dial ----------
+
+    /** Stack of FAB-sized category buttons that rises out of the FAB; tapping outside closes it. */
+    private void openDial(FrameLayout root, Button fab) {
+        dial = new FrameLayout(c);
+        dial.setBackgroundColor(Ui.alpha(0xFF000000, 0.3f));
+        dial.setAlpha(0f);
+        dial.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { closeDial(); }
+        });
+        LinearLayout list = Ui.vbox(c);
+        int n = FastingLogic.MEALS.length, w = Math.round(fab.getWidth() * 0.9f), h = Ui.dp(c, DIAL_H);
+        int bg = Ui.shade(Ui.col(c, R.color.eat), 0.82f);
+        for (int i = 0; i < n; i++) {
+            final int meal = i;
+            Button b = Ui.fabShaped(c, FastingLogic.MEALS[i], bg, Ui.onColor(c, R.color.eat));
+            b.setSingleLine(true);
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    closeDial();
+                    openAdd(meal);
+                }
+            });
+            // Start stacked on the FAB, then rise into place; the bottom button moves first.
+            b.setTranslationY(rise(i, n));
+            b.setAlpha(0f);
+            b.animate().translationY(0).alpha(1f).setStartDelay((n - 1 - i) * 30L).setDuration(240)
+                    .setInterpolator(new DecelerateInterpolator(2f)).start();
+            list.addView(b, Ui.lpm(c, w, h, 0, 0, 0, DIAL_GAP));
+        }
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.END);
+        // Centred over the FAB; the last button's own bottom margin leaves the gap above the FAB.
+        lp.setMargins(0, 0, Ui.dp(c, 16) + (fab.getWidth() - w) / 2, Ui.dp(c, 16) + fab.getHeight());
+        dial.addView(list, lp);
+        // Below the FAB so it stays on top and can close the dial.
+        root.addView(dial, root.indexOfChild(fab), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        dial.animate().alpha(1f).setDuration(200).start();
+    }
+
+    /** Downward offset that puts dial button i (of n, top first) centred on the FAB. */
+    private int rise(int i, int n) {
+        return Ui.dp(c, (n - 1 - i) * (DIAL_H + DIAL_GAP) + DIAL_GAP + DIAL_H / 2f + 56 / 2f); // 56 = FAB height
+    }
+
+    private void closeDial() {
+        final FrameLayout d = dial;
+        if (d == null) return;
+        dial = null;
+        d.setClickable(false);
+        LinearLayout list = (LinearLayout) d.getChildAt(0);
+        int n = list.getChildCount();
+        for (int i = 0; i < n; i++) {
+            View b = list.getChildAt(i);
+            b.setEnabled(false);
+            b.animate().translationY(rise(i, n)).alpha(0f).setStartDelay(0).setDuration(360).start();
+        }
+        d.animate().alpha(0f).setDuration(400).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                if (d.getParent() != null) ((FrameLayout) d.getParent()).removeView(d);
+            }
+        }).start();
+    }
+
+    void openAdd(int meal) {
+        if (meal == FastingLogic.WATER) waterDialog();
+        else new AddFood(meal);
+    }
+
+    private void waterDialog() {
+        final int[] amounts = {250, 500, 750, 1000};
+        String[] labels = {"Glass  -  250 ml", "Bottle  -  500 ml", "Large bottle  -  750 ml", "1 litre"};
+        new AlertDialog.Builder(c)
+                .setTitle("Add water  -  " + Ui.dayLabel(a.selectedDay))
+                .setItems(labels, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) { commit(water(amounts[w]), FastingLogic.WATER, null); }
+                })
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private static Db.Food water(int ml) {
+        Db.Food f = new Db.Food();
+        f.name = "Water";
+        f.amount = ml + " ml";
+        f.zeroCal = true;
+        return f;
+    }
+
+    /** Volume of an amount like "250 ml", or 0 when it isn't in millilitres. */
+    private static double millilitres(String amount) {
+        String s = amount.trim();
+        if (!s.endsWith("ml")) return 0;
+        try {
+            return Double.parseDouble(s.substring(0, s.length() - 2).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
 
     // ---------- saving (shared by all add paths) ----------
 
@@ -182,10 +296,10 @@ final class FoodScreen extends Screen {
         });
     }
 
-    private RadioGroup mealPicker(int checked) {
+    private RadioGroup mealPicker(int checked, int count) {
         RadioGroup g = new RadioGroup(c);
         g.setOrientation(RadioGroup.HORIZONTAL);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < count; i++) {
             RadioButton rb = new RadioButton(c);
             rb.setText(FastingLogic.MEALS[i]);
             rb.setTextSize(12);
@@ -198,7 +312,7 @@ final class FoodScreen extends Screen {
 
     private static int mealOf(RadioGroup g, int def) {
         int id = g.getCheckedRadioButtonId();
-        return id >= 2000 && id < 2004 ? id - 2000 : def;
+        return id >= 2000 && id < 2000 + FastingLogic.MEALS.length ? id - 2000 : def;
     }
 
     // ---------- add dialog ----------
@@ -215,7 +329,7 @@ final class FoodScreen extends Screen {
             defaultMeal = mealArg >= 0 ? mealArg
                     : FastingLogic.mealForHour(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).getHour());
             LinearLayout body = Ui.dialogBody(c);
-            meals = mealPicker(defaultMeal);
+            meals = mealPicker(defaultMeal, FastingLogic.WATER);
             body.addView(meals);
             LinearLayout tabRow = Ui.hbox(c);
             tabRow.setPadding(0, Ui.dp(c, 8), 0, Ui.dp(c, 8));
@@ -302,6 +416,7 @@ final class FoodScreen extends Screen {
                 b.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        if (dn.equals("Water")) { commit(water(250), FastingLogic.WATER, dlg); return; }
                         Db.Food food = new Db.Food();
                         food.name = dn;
                         food.amount = "1 cup";
@@ -523,7 +638,7 @@ final class FoodScreen extends Screen {
         m.addView(Ui.labeled(c, "Carbs g", cb), Ui.lp(0, Ui.WRAP, 1f));
         m.addView(Ui.labeled(c, "Fat g", fat), Ui.lp(0, Ui.WRAP, 1f));
         body.addView(m);
-        final RadioGroup meals = mealPicker(f.meal);
+        final RadioGroup meals = mealPicker(f.meal, FastingLogic.MEALS.length);
         body.addView(meals);
         ScrollView sv = new ScrollView(c);
         sv.addView(body);
