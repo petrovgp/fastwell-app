@@ -20,6 +20,13 @@ final class Prefs {
     boolean onboarded() { return p.getBoolean("onboarded", false); }
     void setOnboarded(boolean v) { p.edit().putBoolean("onboarded", v).apply(); }
 
+    /** Whether a meal's card on the food screen is folded down to its title (bit per meal). */
+    boolean mealCollapsed(int meal) { return (p.getInt("meals_collapsed", 0) & (1 << meal)) != 0; }
+    void setMealCollapsed(int meal, boolean v) {
+        int bits = p.getInt("meals_collapsed", 0);
+        p.edit().putInt("meals_collapsed", v ? bits | (1 << meal) : bits & ~(1 << meal)).apply();
+    }
+
     int kcalTarget() { return p.getInt("kcal", 2000); }
     int proteinTarget() { return p.getInt("protein", 120); }
     int carbsTarget() { return p.getInt("carbs", 220); }

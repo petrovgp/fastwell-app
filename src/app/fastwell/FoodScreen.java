@@ -72,8 +72,15 @@ final class FoodScreen extends Screen {
                 ml += millilitres(f.amount);
             }
             String total = m == FastingLogic.WATER ? (ml > 0 ? Ui.n0(ml) + " ml" : "") : (kcal > 0 ? Ui.n0(kcal) + " kcal" : "");
+            LinearLayout card = Ui.card(c);
+            card.setPadding(Ui.dp(c, 8), Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 4));
+
+            // Title with its + at the end; the divider below only appears once something is logged.
             LinearLayout head = Ui.hbox(c);
+            final ImageView chevron = Ui.icon(c, R.drawable.ic_right, R.color.text2, 18);
+            head.addView(chevron, Ui.lpm(c, Ui.dp(c, 18), Ui.dp(c, 18), 6, 0, 0, 0));
             TextView title = Ui.sectionTitle(c, FastingLogic.MEALS[m] + (total.isEmpty() ? "" : "  -  " + total));
+            title.setPadding(Ui.dp(c, 4), 0, 0, 0);
             head.addView(title, Ui.lp(0, Ui.WRAP, 1f));
             ImageView add = Ui.iconButton(c, R.drawable.ic_add, R.color.eat, "Add to " + FastingLogic.MEALS[m]);
             add.setOnClickListener(new View.OnClickListener() {
@@ -81,26 +88,32 @@ final class FoodScreen extends Screen {
                 public void onClick(View v) { openAdd(meal); }
             });
             head.addView(add);
-            col.addView(head);
+            card.addView(head);
 
-            LinearLayout card = Ui.card(c);
-            card.setPadding(Ui.dp(c, 8), Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 4));
-            boolean any = false;
+            final LinearLayout items = Ui.vbox(c);
             for (final Db.Food f : foods) {
                 if (f.meal != m) continue;
-                if (any) card.addView(Ui.divider(c));
-                any = true;
-                card.addView(foodRow(f));
+                if (items.getChildCount() == 0) items.addView(Ui.divider(c));
+                items.addView(foodRow(f), Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 0, 0, 6));
             }
-            if (!any) {
-                TextView e = Ui.muted(c, "Nothing logged  -  tap + to add");
-                e.setPadding(Ui.dp(c, 8), Ui.dp(c, 12), Ui.dp(c, 8), Ui.dp(c, 12));
-                Ui.clickable(e, 8);
-                e.setOnClickListener(new View.OnClickListener() {
+            if (items.getChildCount() > 0) {
+                card.addView(items);
+                // Tapping the title row folds the logged items away; the choice is remembered per meal.
+                boolean collapsed = prefs.mealCollapsed(m);
+                items.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+                chevron.setRotation(collapsed ? 0 : 90);
+                Ui.clickable(head, 10);
+                head.setOnClickListener(new View.OnClickListener() {
                     @Override
-                    public void onClick(View v) { openAdd(meal); }
+                    public void onClick(View v) {
+                        boolean fold = items.getVisibility() == View.VISIBLE;
+                        prefs.setMealCollapsed(meal, fold);
+                        items.setVisibility(fold ? View.GONE : View.VISIBLE);
+                        chevron.animate().rotation(fold ? 0 : 90).setDuration(160).start();
+                    }
                 });
-                card.addView(e);
+            } else {
+                chevron.setVisibility(View.INVISIBLE);
             }
             col.addView(card);
         }
@@ -119,18 +132,13 @@ final class FoodScreen extends Screen {
     }
 
     private View foodRow(final Db.Food f) {
+        // Compact single line on a faint highlight, which also separates it from its neighbours.
         LinearLayout r = Ui.hbox(c);
-        r.setPadding(Ui.dp(c, 8), Ui.dp(c, 10), Ui.dp(c, 8), Ui.dp(c, 10));
-        LinearLayout left = Ui.vbox(c);
-        left.addView(Ui.text(c, f.name, 15, R.color.text, false));
-        StringBuilder sub = new StringBuilder();
-        if (!f.amount.isEmpty()) sub.append(f.amount).append("  -  ");
-        if (f.zeroCal) sub.append("zero-calorie, keeps your fast");
-        else sub.append("P ").append(Ui.n0(f.protein)).append("  C ").append(Ui.n0(f.carbs)).append("  F ").append(Ui.n0(f.fat));
-        sub.append("  -  ").append(Ui.time(c, f.loggedAt));
-        left.addView(Ui.muted(c, sub.toString()));
-        r.addView(left, Ui.lp(0, Ui.WRAP, 1f));
-        TextView k = Ui.big(c, Ui.n0(f.kcal), 16, R.color.text);
+        r.setPadding(Ui.dp(c, 12), Ui.dp(c, 8), Ui.dp(c, 12), Ui.dp(c, 8));
+        r.setBackground(Ui.round(Ui.alpha(Ui.col(c, R.color.text), 0.05f), Ui.dp(c, 10)));
+        r.addView(Ui.text(c, f.name, 15, R.color.text, false), Ui.lp(0, Ui.WRAP, 1f));
+        String value = f.meal == FastingLogic.WATER ? Ui.n0(millilitres(f.amount)) + " ml" : Ui.n0(f.kcal) + " kcal";
+        TextView k = Ui.big(c, value, 15, R.color.text);
         k.setPadding(Ui.dp(c, 8), 0, 0, 0);
         r.addView(k);
         Ui.clickable(r, 8);
