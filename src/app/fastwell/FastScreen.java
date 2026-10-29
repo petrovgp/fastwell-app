@@ -203,21 +203,7 @@ final class FastScreen extends Screen {
         }
     }
 
-    private void editStart() {
-        final Db.Fast f = active;
-        a.pickDateTime(f.startAt, new MainActivity.LongCb() {
-            @Override
-            public void on(long t) {
-                if (t > System.currentTimeMillis()) { Ui.toast(c, "Start time can't be in the future"); return; }
-                Db.Fast last = db.lastCompletedFast();
-                if (last != null && t < last.endAt) { Ui.toast(c, "That overlaps your previous fast"); return; }
-                f.startAt = t;
-                db.updateFast(f);
-                Notifier.refresh(c);
-                a.refresh();
-            }
-        });
-    }
+    private void editStart() { a.push(new EditStartScreen(a, active)); }
 
     // ---------- shared dialogs ----------
 

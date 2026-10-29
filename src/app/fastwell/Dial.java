@@ -28,12 +28,14 @@ import java.util.Locale;
 final class Dial extends View {
     interface Listener { void onChange(int column, double value); }
     interface Derive { double of(double sourceValue); }
+    interface Format { String of(double value); }
 
     static final class Col {
         final String label, unit;
         final double min, step;
         final int count, decimals, source;
         final Derive derive;
+        Format format;
         float pos;
         int last;
 
@@ -118,6 +120,13 @@ final class Dial extends View {
 
     void setListener(Listener l) { listener = l; }
 
+    /** Shows a column's values as text (e.g. a day offset as "Yesterday") instead of numbers. */
+    void setFormat(int col, Format f) {
+        cols.get(col).format = f;
+        describe();
+        invalidate();
+    }
+
     double value(int col) {
         Col c = cols.get(col);
         if (!c.editable()) return c.derive.of(cols.get(c.source).value());
@@ -133,13 +142,16 @@ final class Dial extends View {
     }
 
     private String fmt(Col c, double v) {
+        if (c.format != null) return c.format.of(v);
         if (c.decimals == 0 || Math.abs(v - Math.round(v)) < 1e-6) return String.valueOf(Math.round(v));
         return String.format(Locale.US, "%." + c.decimals + "f", v);
     }
 
     @Override
     protected void onMeasure(int w, int h) {
-        setMeasuredDimension(getDefaultSize(Ui.dp(getContext(), 300), w), (int) (headerH + itemH * 4.4f));
+        // An exact height (e.g. from a layout weight) is honoured so dials can share a fixed screen.
+        int height = MeasureSpec.getMode(h) == MeasureSpec.EXACTLY ? MeasureSpec.getSize(h) : (int) (headerH + itemH * 4.4f);
+        setMeasuredDimension(getDefaultSize(Ui.dp(getContext(), 300), w), height);
     }
 
     @Override
