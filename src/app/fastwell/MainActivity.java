@@ -362,6 +362,19 @@ public class MainActivity extends Activity {
         final View v = s.build();
         if (v.getBackground() == null) v.setBackgroundColor(Ui.col(this, R.color.bg));
         float w = Math.max(content.getWidth(), getWindow().getDecorView().getWidth());
+        // Park the old screen behind the shell at its current size, so showing the
+        // nav bar doesn't squash it while the new screen slides over.
+        final FrameLayout root = (FrameLayout) column.getParent();
+        if (old != null) {
+            int[] at = new int[2], base = new int[2];
+            old.getLocationInWindow(at);
+            root.getLocationInWindow(base);
+            FrameLayout.LayoutParams op = new FrameLayout.LayoutParams(old.getWidth(), old.getHeight());
+            op.leftMargin = at[0] - base[0];
+            op.topMargin = at[1] - base[1];
+            content.removeView(old);
+            root.addView(old, 0, op);
+        }
         v.setTranslationX(-w);
         content.addView(v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         v.setElevation(Ui.dp(this, 4));
@@ -371,13 +384,16 @@ public class MainActivity extends Activity {
         s.tick();
         updateBack();
         if (old != null) old.animate().translationX(w * 0.18f).alpha(0.4f).setDuration(650).start();
+        nav.setTranslationX(-w);
+        nav.animate().translationX(0).setDuration(650)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(2.2f)).start();
         v.animate().translationX(0).setDuration(650)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(2.2f))
                 .withEndAction(new Runnable() {
                     @Override
                     public void run() {
                         v.setElevation(0);
-                        if (old != null) content.removeView(old);
+                        if (old != null) root.removeView(old);
                     }
                 }).start();
     }
