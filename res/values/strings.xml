@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Fastwell</string>
+    <string name="widget_name">Fasting timer</string>
 </resources>
