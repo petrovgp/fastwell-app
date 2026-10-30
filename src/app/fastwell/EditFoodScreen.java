@@ -106,7 +106,7 @@ final class EditFoodScreen extends Screen {
             return card;
         }
         amount.setText(amountText);
-        amount.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        amount.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 amountText = s.toString();

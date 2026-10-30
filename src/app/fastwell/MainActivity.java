@@ -133,7 +133,7 @@ public class MainActivity extends Activity {
             int t = saved != null ? saved.getInt("tab", TAB_TODAY) : getIntent().getIntExtra(EXTRA_TAB, TAB_TODAY);
             showTab(t);
             long workoutId = saved != null ? saved.getLong("workout", 0) : 0;
-            if (workoutId > 0 && db.getWorkout(workoutId) != null) push(new WorkoutEditScreen(this, workoutId));
+            if (workoutId > 0 && db.getWorkout(workoutId) != null) push(new LogWorkoutScreen(this, db.getWorkout(workoutId)));
             if (saved != null && saved.containsKey("day")) selectedDay = LocalDate.parse(saved.getString("day"));
         }
         if (!(screen instanceof LaunchScreen)) CrashLog.showIfAny(this);
@@ -173,7 +173,7 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(out);
         out.putInt("tab", tab);
         out.putString("day", selectedDay.toString());
-        if (screen instanceof WorkoutEditScreen) out.putLong("workout", ((WorkoutEditScreen) screen).workoutId);
+        if (screen instanceof LogWorkoutScreen) out.putLong("workout", ((LogWorkoutScreen) screen).workoutId());
     }
 
     // ---------- window and shell ----------

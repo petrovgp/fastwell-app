@@ -233,6 +233,38 @@ final class FastingLogic {
     static final int WATER_MIN = 500, WATER_MAX = 6000, WATER_STEP = 100, WATER_DEFAULT = 2500;
     /** Daily workout target in sessions, as set on its dial. */
     static final int WORKOUT_MIN = 1, WORKOUT_MAX = 6, WORKOUT_DEFAULT = 1;
+    /** Activities on the cardio dial; Other, the last one, is named by the user and has no calorie estimate. */
+    static final String[] CARDIO = {"Run", "Walk", "Cycle", "Swim", "Row", "Elliptical", "Hike", "Other"};
+    static final int OTHER_CARDIO = 7;
+    /** Metabolic equivalents at RPE 5, by cardio preset. */
+    private static final double[] CARDIO_MET = {9.8, 3.5, 7.5, 7.0, 7.0, 5.0, 6.0};
+    /** A generic gym session, rests between sets included. */
+    private static final double STRENGTH_MET = 4.5;
+    static final int RPE_MIN = 1, RPE_MAX = 10, RPE_DEFAULT = 5;
+
+    /** MET x kg x hours, with the MET scaled from 0.6x at RPE 1 through 1x at RPE 5 to 1.5x at RPE 10. */
+    private static double workoutKcal(double met, int seconds, int rpe, double weightKg) {
+        return met * (0.5 + 0.1 * rpe) * weightKg * seconds / 3600.0;
+    }
+
+    static double cardioKcal(int activity, int seconds, int rpe, double weightKg) {
+        if (activity == OTHER_CARDIO) return 0;
+        return workoutKcal(CARDIO_MET[activity], seconds, rpe, weightKg);
+    }
+
+    static double strengthKcal(int seconds, int rpe, double weightKg) {
+        return workoutKcal(STRENGTH_MET, seconds, rpe, weightKg);
+    }
+
+    /** A workout's length, leaving out any part that is zero: "1 h 5 min", "12 min 30 s". */
+    static String workoutDur(int seconds) {
+        int h = seconds / 3600, m = seconds / 60 % 60, s = seconds % 60;
+        StringBuilder sb = new StringBuilder();
+        if (h > 0) sb.append(h).append(" h ");
+        if (m > 0) sb.append(m).append(" min ");
+        if (s > 0 || sb.length() == 0) sb.append(s).append(" s ");
+        return sb.toString().trim();
+    }
 
     /** The unit after a count of n workouts. */
     static String sessions(int n) { return n == 1 ? " session" : " sessions"; }

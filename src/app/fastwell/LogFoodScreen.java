@@ -226,7 +226,7 @@ final class LogFoodScreen extends Screen {
         LinearLayout l = Ui.vbox(c);
         final EditText nameField = Ui.field(c, "Name (optional)", Ui.TXT);
         nameField.setText(name);
-        nameField.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        nameField.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 name = s.toString().trim();
@@ -236,7 +236,7 @@ final class LogFoodScreen extends Screen {
         l.addView(nameField, Ui.lp(Ui.MATCH, Ui.WRAP));
         EditText gramsField = Ui.field(c, "Amount in grams (optional)", Ui.DEC);
         gramsField.setText(quickGrams);
-        gramsField.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        gramsField.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) { quickGrams = s.toString(); }
         });
@@ -254,7 +254,7 @@ final class LogFoodScreen extends Screen {
         final EditText q = Ui.field(c, "Search foods, e.g. greek yogurt", Ui.TXT);
         q.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         q.setText(query);
-        q.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        q.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) { query = s.toString().trim(); }
         });
@@ -375,7 +375,7 @@ final class LogFoodScreen extends Screen {
                 + " kcal, P " + Ui.n1(item.p100) + ", C " + Ui.n1(item.c100) + ", F " + Ui.n1(item.f100)));
         EditText g = Ui.field(c, "Amount in grams", Ui.DEC);
         g.setText(itemGrams);
-        g.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        g.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 itemGrams = s.toString();
@@ -401,7 +401,7 @@ final class LogFoodScreen extends Screen {
         };
         kcalField = Ui.field(c, "0", Ui.DEC);
         kcalField.setOnFocusChangeListener(snapOnFocus);
-        kcalField.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        kcalField.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 if (syncing || searching) return;
@@ -415,7 +415,7 @@ final class LogFoodScreen extends Screen {
             final int m = MACRO_ROWS[r];
             EditText f = Ui.field(c, "0", Ui.DEC);
             f.setOnFocusChangeListener(snapOnFocus);
-            f.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+            f.addTextChangedListener(new Ui.SimpleWatcher() {
                 @Override
                 public void afterTextChanged(Editable s) {
                     if (syncing || searching) return;
@@ -525,7 +525,7 @@ final class LogFoodScreen extends Screen {
         }
         customField = Ui.field(c, "Amount in ml", Ui.NUM);
         customField.setText(customMl);
-        customField.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+        customField.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 customMl = s.toString();

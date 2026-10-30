@@ -191,6 +191,24 @@ public class FastingLogicTest {
         eq(2.0, FastingLogic.servings("2 servings"), "two servings");
         eq(1.5, FastingLogic.servings("1.5 servings"), "part servings");
         eq(1.0, FastingLogic.servings("0 servings"), "zero servings falls back to one");
+        // workout calories
+        eq(360L, Math.round(FastingLogic.strengthKcal(3600, 5, 80)), "strength: 1 h, RPE 5, 80 kg");
+        eq(216L, Math.round(FastingLogic.strengthKcal(3600, 1, 80)), "strength at RPE 1");
+        eq(540L, Math.round(FastingLogic.strengthKcal(3600, 10, 80)), "strength at RPE 10");
+        eq(490L, Math.round(FastingLogic.cardioKcal(0, 1800, 5, 100)), "run: 30 min, RPE 5, 100 kg");
+        eq(0L, Math.round(FastingLogic.cardioKcal(1, 0, 5, 80)), "no time, no calories");
+        eq("Other", FastingLogic.CARDIO[FastingLogic.OTHER_CARDIO], "Other is the last activity");
+        for (int i = 0; i < FastingLogic.OTHER_CARDIO; i++) {
+            eq(true, FastingLogic.cardioKcal(i, 3600, 5, 80) > 0, "preset has a calorie estimate: " + FastingLogic.CARDIO[i]);
+        }
+        eq(0.0, FastingLogic.cardioKcal(FastingLogic.OTHER_CARDIO, 3600, 5, 80), "Other has no calorie estimate");
+        // workout durations
+        eq("30 s", FastingLogic.workoutDur(30), "seconds only");
+        eq("45 min", FastingLogic.workoutDur(45 * 60), "whole minutes");
+        eq("12 min 30 s", FastingLogic.workoutDur(12 * 60 + 30), "minutes and seconds");
+        eq("2 h", FastingLogic.workoutDur(7200), "whole hours");
+        eq("1 h 5 min", FastingLogic.workoutDur(3900), "hours and minutes");
+        eq("1 h 5 min 9 s", FastingLogic.workoutDur(3909), "hours, minutes and seconds");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

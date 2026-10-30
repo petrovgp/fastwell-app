@@ -66,7 +66,8 @@ final class Db extends SQLiteOpenHelper {
     static final class Workout {
         long id, startAt, endAt;
         String day = "", name = "", note = "";
-        int type, durationMin;
+        /** rpe is 0 on workouts logged before it could be set. */
+        int type, durationSec, rpe;
         boolean fasted;
         double distanceKm, kcal;
     }
@@ -88,7 +89,7 @@ final class Db extends SQLiteOpenHelper {
         return inst;
     }
 
-    private Db(Context c) { super(c, "fastwell.db", null, 1); }
+    private Db(Context c) { super(c, "fastwell.db", null, 2); }
 
     static final String[] TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set"};
 
@@ -105,7 +106,8 @@ final class Db extends SQLiteOpenHelper {
         d.execSQL("CREATE TABLE exercise (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, muscle TEXT, custom INTEGER DEFAULT 0)");
         d.execSQL("CREATE TABLE workout (id INTEGER PRIMARY KEY AUTOINCREMENT, start_at INTEGER NOT NULL, end_at INTEGER DEFAULT 0, "
                 + "day TEXT NOT NULL, type INTEGER NOT NULL, name TEXT, fasted INTEGER DEFAULT 0, note TEXT, "
-                + "duration_min INTEGER DEFAULT 0, distance_km REAL DEFAULT 0, kcal REAL DEFAULT 0)");
+                + "duration_min INTEGER DEFAULT 0, distance_km REAL DEFAULT 0, kcal REAL DEFAULT 0, "
+                + "duration_sec INTEGER DEFAULT 0, rpe INTEGER DEFAULT 0)");
         d.execSQL("CREATE INDEX idx_workout_day ON workout(day)");
         d.execSQL("CREATE TABLE workout_set (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, "
                 + "exercise_id INTEGER NOT NULL, ord INTEGER NOT NULL, reps INTEGER DEFAULT 0, weight REAL DEFAULT 0, done INTEGER DEFAULT 0)");
@@ -114,7 +116,20 @@ final class Db extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase d, int oldV, int newV) { /* v1 only */ }
+    public void onUpgrade(SQLiteDatabase d, int oldV, int newV) {
+        if (oldV < 2) {
+            d.execSQL("ALTER TABLE workout ADD COLUMN duration_sec INTEGER DEFAULT 0");
+            d.execSQL("ALTER TABLE workout ADD COLUMN rpe INTEGER DEFAULT 0");
+            fillDurations(d);
+        }
+    }
+
+    /** Gives v1 workouts, from an upgrade or an old backup, a duration; a live strength workout ends after an hour. */
+    private static void fillDurations(SQLiteDatabase d) {
+        d.execSQL("UPDATE workout SET end_at = start_at + 3600000 WHERE type = " + STRENGTH + " AND end_at = 0");
+        d.execSQL("UPDATE workout SET duration_sec = CASE type WHEN " + STRENGTH
+                + " THEN (end_at - start_at) / 1000 ELSE duration_min * 60 END WHERE duration_sec = 0");
+    }
 
     private static final String[][] SEED = {
         {"Bench press", "Chest"}, {"Incline bench press", "Chest"}, {"Dumbbell bench press", "Chest"},
@@ -395,7 +410,7 @@ final class Db extends SQLiteOpenHelper {
         Workout w = new Workout();
         w.id = l(c, "id"); w.startAt = l(c, "start_at"); w.endAt = l(c, "end_at"); w.day = s(c, "day");
         w.type = i(c, "type"); w.name = s(c, "name"); w.fasted = i(c, "fasted") != 0; w.note = s(c, "note");
-        w.durationMin = i(c, "duration_min"); w.distanceKm = dbl(c, "distance_km"); w.kcal = dbl(c, "kcal");
+        w.durationSec = i(c, "duration_sec"); w.rpe = i(c, "rpe"); w.distanceKm = dbl(c, "distance_km"); w.kcal = dbl(c, "kcal");
         return w;
     }
 
@@ -408,7 +423,9 @@ final class Db extends SQLiteOpenHelper {
         v.put("name", w.name);
         v.put("fasted", w.fasted ? 1 : 0);
         v.put("note", w.note);
-        v.put("duration_min", w.durationMin);
+        v.put("duration_min", w.durationSec / 60);
+        v.put("duration_sec", w.durationSec);
+        v.put("rpe", w.rpe);
         v.put("distance_km", w.distanceKm);
         v.put("kcal", w.kcal);
         return v;
@@ -595,6 +612,7 @@ final class Db extends SQLiteOpenHelper {
                     d.insertOrThrow(t, null, v);
                 }
             }
+            fillDurations(d);
             d.setTransactionSuccessful();
         } finally { d.endTransaction(); }
     }

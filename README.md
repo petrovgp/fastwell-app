@@ -27,4 +27,4 @@ The signing key `keystore/fastwell.jks` is deliberately not in the repo. Put you
 - `FastingLogic` – plans, stages, calorie formula, streaks (pure Java, unit-tested)
 - `Notifier`, `FastReceiver`, `BootReceiver` – live timer notification, goal alarm, "End fast" action, reboot restore
 - `Off` – Open Food Facts search and barcode lookup
-- Screens: `Onboarding`, `Today`, `Fast`, `FastHistory`, `Food`, `Workouts`, `WorkoutEdit`, `Progress`, `Settings`
+- Screens: `Onboarding`, `Today`, `Fast`, `FastHistory`, `Food`, `Workouts`, `LogWorkout`, `Progress`, `Settings`
