@@ -8,7 +8,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Short white loading screen: logo and name centered. MainActivity drops the next screen in from the top. */
+/** Short loading screen in the system theme: logo and name centered. MainActivity drops the next screen in from the top. */
 final class LaunchScreen extends Screen {
     static final long DURATION_MS = 1200;
 
@@ -16,9 +16,6 @@ final class LaunchScreen extends Screen {
 
     @Override
     boolean showsNav() { return false; }
-
-    @Override
-    boolean lightBars() { return true; }
 
     @Override
     View build() {
@@ -31,7 +28,6 @@ final class LaunchScreen extends Screen {
         logo.setContentDescription("Fastwell logo");
         center.addView(logo, Ui.lp(Ui.dp(c, 112), Ui.dp(c, 112)));
         TextView name = Ui.text(c, "Fastwell", 32, R.color.text, true);
-        name.setTextColor(Ui.col(c, R.color.brand_navy));
         name.setPadding(0, Ui.dp(c, 18), 0, 0);
         name.setGravity(Gravity.CENTER_HORIZONTAL);
         // Explicit WRAP width: a vertical LinearLayout's default child width is MATCH_PARENT,
@@ -50,7 +46,6 @@ final class LaunchScreen extends Screen {
                 tag.addView(dot, dp);
             }
             TextView w = Ui.text(c, words[i], 15, R.color.text2, true);
-            w.setTextColor(0xFF5B6488);
             w.setSingleLine(true);
             tag.addView(w, Ui.lp(Ui.WRAP, Ui.WRAP));
         }

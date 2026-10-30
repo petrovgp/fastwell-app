@@ -17,4 +17,5 @@
     <color name="carbs">#FFC48A</color>
     <color name="fat">#AEB8E6</color>
     <color name="water">#7CCBF2</color>
+    <color name="splash_bg">#0E1226</color>
 </resources>
