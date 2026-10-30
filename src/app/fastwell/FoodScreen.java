@@ -1,24 +1,18 @@
 package app.fastwell;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.time.LocalDate;
 import java.util.List;
 
-/** Calorie journal for the selected day, grouped by meal; adding opens LogFoodScreen. */
+/** Calorie journal for the selected day, grouped by meal; adding opens LogFoodScreen, tapping a log opens EditFoodScreen. */
 final class FoodScreen extends Screen {
 
     private static final int DIAL_H = 48, DIAL_GAP = 12;
@@ -161,7 +155,7 @@ final class FoodScreen extends Screen {
         Ui.clickable(r, 8);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { editDialog(f); }
+            public void onClick(View v) { a.push(new EditFoodScreen(a, f)); }
         });
         return r;
     }
@@ -234,85 +228,5 @@ final class FoodScreen extends Screen {
 
     void openAdd(int meal) {
         a.push(new LogFoodScreen(a, meal));
-    }
-
-    private RadioGroup mealPicker(int checked, int count) {
-        RadioGroup g = new RadioGroup(c);
-        g.setOrientation(RadioGroup.HORIZONTAL);
-        for (int i = 0; i < count; i++) {
-            RadioButton rb = new RadioButton(c);
-            rb.setText(FastingLogic.MEALS[i]);
-            rb.setTextSize(12);
-            rb.setId(2000 + i);
-            g.addView(rb, new RadioGroup.LayoutParams(0, Ui.WRAP, 1f));
-        }
-        g.check(2000 + checked);
-        return g;
-    }
-
-    private static int mealOf(RadioGroup g, int def) {
-        int id = g.getCheckedRadioButtonId();
-        return id >= 2000 && id < 2000 + FastingLogic.MEALS.length ? id - 2000 : def;
-    }
-
-    // ---------- edit ----------
-
-    private void editDialog(final Db.Food f) {
-        LinearLayout body = Ui.dialogBody(c);
-        final EditText name = Ui.field(c, "Name", Ui.TXT);
-        name.setText(f.name);
-        final EditText amount = Ui.field(c, "Amount (optional)", Ui.TXT);
-        amount.setText(f.amount);
-        final EditText kcal = Ui.field(c, "kcal", Ui.DEC);
-        kcal.setText(Ui.plain(f.kcal));
-        final EditText p = Ui.field(c, "Protein", Ui.DEC);
-        p.setText(Ui.plain(f.protein));
-        final EditText cb = Ui.field(c, "Carbs", Ui.DEC);
-        cb.setText(Ui.plain(f.carbs));
-        final EditText fat = Ui.field(c, "Fat", Ui.DEC);
-        fat.setText(Ui.plain(f.fat));
-        body.addView(Ui.labeled(c, "Name", name));
-        body.addView(Ui.labeled(c, "Amount", amount));
-        body.addView(Ui.labeled(c, "Calories", kcal));
-        LinearLayout m = Ui.hbox(c);
-        m.addView(Ui.labeled(c, "Protein g", p), Ui.lp(0, Ui.WRAP, 1f));
-        m.addView(Ui.labeled(c, "Carbs g", cb), Ui.lp(0, Ui.WRAP, 1f));
-        m.addView(Ui.labeled(c, "Fat g", fat), Ui.lp(0, Ui.WRAP, 1f));
-        body.addView(m);
-        final RadioGroup meals = mealPicker(f.meal, FastingLogic.MEALS.length);
-        body.addView(meals);
-        ScrollView sv = new ScrollView(c);
-        sv.addView(body);
-        new AlertDialog.Builder(c)
-                .setTitle("Edit entry")
-                .setView(sv)
-                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        String n = name.getText().toString().trim();
-                        f.name = n.isEmpty() ? f.name : n;
-                        f.amount = amount.getText().toString().trim();
-                        f.kcal = Math.max(0, Ui.num(kcal, f.kcal));
-                        f.protein = Math.max(0, Ui.num(p, 0));
-                        f.carbs = Math.max(0, Ui.num(cb, 0));
-                        f.fat = Math.max(0, Ui.num(fat, 0));
-                        f.meal = mealOf(meals, f.meal);
-                        db.updateFood(f);
-                        a.refresh();
-                    }
-                })
-                .setNeutralButton("Delete", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        db.deleteFood(f.id);
-                        a.refresh();
-                        a.snack("Deleted " + f.name, new Runnable() {
-                            @Override
-                            public void run() { db.addFood(f.copy()); }
-                        });
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 }

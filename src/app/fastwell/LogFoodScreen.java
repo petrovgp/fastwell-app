@@ -36,7 +36,7 @@ final class LogFoodScreen extends Screen {
     private int meal;
     private boolean searching;
     // Quick log
-    private String name = "", kcalText = "";
+    private String name = "", quickGrams = "", kcalText = "";
     private final String[] gramText = {"", "", ""};
     private final double[] grams = new double[3];
     /** Macros least recently typed first; the first ones take up the difference to the calories. */
@@ -119,14 +119,29 @@ final class LogFoodScreen extends Screen {
 
     // ---------- meal bar ----------
 
-    /** Breakfast, lunch, dinner, snacks and water as pills in one rounded bar, like the date strip. */
+    /** Called with the meal whose pill was tapped. */
+    interface MealPicked {
+        void picked(int meal);
+    }
+
     private View mealBar() {
+        return mealBar(c, FastingLogic.MEALS.length, mealPills, new MealPicked() {
+            @Override
+            public void picked(int m) {
+                meal = m;
+                showMeal();
+            }
+        });
+    }
+
+    /** The first {@code count} meals as pills in one rounded bar, like the date strip; fills {@code pills}. */
+    static View mealBar(Context c, int count, List<TextView> pills, final MealPicked listener) {
         LinearLayout bar = Ui.hbox(c);
         int p = Ui.dp(c, 4);
         bar.setPadding(p, p, p, p);
         bar.setBackground(Ui.round(Ui.col(c, R.color.surface), Ui.dp(c, 24), Ui.col(c, R.color.outline), Ui.night(c) ? 0 : Ui.dp(c, 1)));
-        mealPills.clear();
-        for (int i = 0; i < FastingLogic.MEALS.length; i++) {
+        pills.clear();
+        for (int i = 0; i < count; i++) {
             final int m = i;
             TextView pill = Ui.text(c, FastingLogic.MEALS[i], 13, R.color.text2, true);
             pill.setGravity(Gravity.CENTER);
@@ -136,12 +151,9 @@ final class LogFoodScreen extends Screen {
             pill.setFocusable(true);
             pill.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    meal = m;
-                    showMeal();
-                }
+                public void onClick(View v) { listener.picked(m); }
             });
-            mealPills.add(pill);
+            pills.add(pill);
             bar.addView(pill, Ui.lp(Ui.WRAP, Ui.WRAP, 1f));
         }
         LinearLayout.LayoutParams lp = Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 4, 0, 16);
@@ -149,16 +161,21 @@ final class LogFoodScreen extends Screen {
         return bar;
     }
 
-    /** Restyles the meal pills in place and swaps the food and water panes. */
-    private void showMeal() {
-        for (int i = 0; i < mealPills.size(); i++) {
-            TextView pill = mealPills.get(i);
+    /** Restyles the meal pills in place. */
+    static void showMealPills(Context c, List<TextView> pills, int meal) {
+        for (int i = 0; i < pills.size(); i++) {
+            TextView pill = pills.get(i);
             boolean on = i == meal;
             int fill = on ? Ui.alpha(Ui.col(c, R.color.eat), Ui.night(c) ? 0.22f : 0.14f) : 0;
             pill.setBackground(Ui.ripple(c, Ui.round(fill, Ui.dp(c, 20)), Ui.dp(c, 20)));
             pill.setTextColor(Ui.col(c, on ? R.color.eat : R.color.text2));
             pill.setContentDescription(FastingLogic.MEALS[i] + (on ? ", selected" : ""));
         }
+    }
+
+    /** Updates the meal pills and swaps the food and water panes. */
+    private void showMeal() {
+        showMealPills(c, mealPills, meal);
         boolean isWater = meal == FastingLogic.WATER;
         title.setText(isWater ? "Log water" : "Log food");
         foodPane.setVisibility(isWater ? View.GONE : View.VISIBLE);
@@ -217,6 +234,13 @@ final class LogFoodScreen extends Screen {
             }
         });
         l.addView(nameField, Ui.lp(Ui.MATCH, Ui.WRAP));
+        EditText gramsField = Ui.field(c, "Amount in grams (optional)", Ui.DEC);
+        gramsField.setText(quickGrams);
+        gramsField.addTextChangedListener(new WorkoutEditScreen.SimpleWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) { quickGrams = s.toString(); }
+        });
+        l.addView(gramsField, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 8, 0, 0));
         TextView hint = Ui.muted(c, "To log a zero-calorie drink like black coffee, give it a name and no calories. It keeps your fast.");
         hint.setPadding(Ui.dp(c, 4), Ui.dp(c, 4), 0, Ui.dp(c, 4));
         l.addView(hint);
@@ -585,7 +609,7 @@ final class LogFoodScreen extends Screen {
             double g = Ui.num(itemGrams, 0);
             db.saveItem(item);
             f.name = item.brand.isEmpty() ? item.name : item.name + " (" + item.brand + ")";
-            f.amount = Ui.n1(g) + " g";
+            f.amount = Ui.plain(g) + " g";
             f.kcal = item.kcal100 * g / 100;
             f.protein = item.p100 * g / 100;
             f.carbs = item.c100 * g / 100;
@@ -596,6 +620,8 @@ final class LogFoodScreen extends Screen {
             f.fat = grams[FastingLogic.FAT];
             f.kcal = Math.max(0, Ui.num(kcalText, FastingLogic.macroKcal(grams)));
             f.name = name.isEmpty() ? "Quick add" : name;
+            double g = Math.round(Ui.num(quickGrams, 0) * 10) / 10.0;
+            f.amount = g > 0 ? Ui.plain(g) + " g" : "";
             f.zeroCal = f.kcal <= 0;
         }
         commit(f);
@@ -651,13 +677,6 @@ final class LogFoodScreen extends Screen {
                 }
             }
         });
-    }
-
-    private void hideKeyboard() {
-        View focus = a.getCurrentFocus();
-        if (focus == null) return;
-        ((InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(focus.getWindowToken(), 0);
-        focus.clearFocus();
     }
 
     /** Scroll view no taller than its first {@code rows} rows (a vbox of rows with dividers between them). */

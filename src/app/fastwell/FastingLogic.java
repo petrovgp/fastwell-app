@@ -239,6 +239,34 @@ final class FastingLogic {
         }
     }
 
+    /**
+     * Weight of an amount like "150 g", or 0 when it isn't in grams. Older logs were saved in the phone's
+     * number format with at most one decimal, so a separator before three digits is always a thousands one.
+     */
+    static double grams(String amount) {
+        String s = amount.trim();
+        if (!s.endsWith("g")) return 0;
+        s = s.substring(0, s.length() - 1).replaceAll("[\\s\\u00a0\\u202f]", "")
+                .replaceAll("[.,](?=\\d{3}(\\D|$))", "").replace(',', '.');
+        try {
+            return Math.max(0, Double.parseDouble(s));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** Count in an amount like "2 servings"; a log with no weight or readable amount is 1 serving. */
+    static double servings(String amount) {
+        String s = amount.trim();
+        s = s.endsWith("servings") ? s.substring(0, s.length() - 8) : s.endsWith("serving") ? s.substring(0, s.length() - 7) : "";
+        try {
+            double n = Double.parseDouble(s.trim());
+            return n > 0 ? n : 1;
+        } catch (NumberFormatException e) {
+            return 1;
+        }
+    }
+
     /** Name for a water log that didn't record its preset: the preset of that volume, else custom. */
     static String waterName(String amount) {
         double ml = millilitres(amount);

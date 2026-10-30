@@ -2,6 +2,7 @@ package app.fastwell;
 
 import android.content.Context;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 
 /** A screen builds its whole view tree from the database; MainActivity rebuilds it after changes. */
 abstract class Screen {
@@ -32,4 +33,11 @@ abstract class Screen {
 
     /** Screen opened by tapping the date strip's day label. */
     DayPickerScreen dayPicker() { return new DayPickerScreen(a, "Choose day", R.color.primary, null); }
+
+    void hideKeyboard() {
+        View focus = a.getCurrentFocus();
+        if (focus == null) return;
+        ((InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(focus.getWindowToken(), 0);
+        focus.clearFocus();
+    }
 }

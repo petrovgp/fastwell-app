@@ -144,6 +144,25 @@ public class FastingLogicTest {
         eq("Water container", FastingLogic.waterName("a cup"), "unreadable amounts are a water container");
         eq(250.0, FastingLogic.millilitres(" 250 ml "), "millilitres parsed");
         eq(0.0, FastingLogic.millilitres("100 g"), "grams aren't millilitres");
+        // food amounts
+        eq(150.0, FastingLogic.grams(" 150 g "), "grams parsed");
+        eq(150.5, FastingLogic.grams("150.5 g"), "decimal point");
+        eq(150.5, FastingLogic.grams("150,5 g"), "decimal comma");
+        eq(1234.0, FastingLogic.grams("1,234 g"), "comma thousands");
+        eq(1234.0, FastingLogic.grams("1.234 g"), "point thousands");
+        eq(1234.5, FastingLogic.grams("1 234,5 g"), "space thousands");
+        eq(0.0, FastingLogic.grams(""), "no amount has no grams");
+        eq(0.0, FastingLogic.grams("a cup"), "free text has no grams");
+        eq(0.0, FastingLogic.grams("250 ml"), "millilitres aren't grams");
+        eq(0.0, FastingLogic.grams("2 kg"), "only grams are read");
+        eq(0.0, FastingLogic.grams("0 g"), "zero grams is no weight");
+        eq(0.0, FastingLogic.grams("1 serving"), "a serving isn't grams");
+        eq(1.0, FastingLogic.servings(""), "no amount is one serving");
+        eq(1.0, FastingLogic.servings("a cup"), "free text is one serving");
+        eq(1.0, FastingLogic.servings("1 serving"), "one serving");
+        eq(2.0, FastingLogic.servings("2 servings"), "two servings");
+        eq(1.5, FastingLogic.servings("1.5 servings"), "part servings");
+        eq(1.0, FastingLogic.servings("0 servings"), "zero servings falls back to one");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }
