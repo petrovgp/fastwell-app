@@ -125,7 +125,10 @@ final class FastScreen extends Screen {
 
     private View stageCard() {
         LinearLayout card = Ui.card(c);
-        card.addView(Ui.muted(c, "Current stage"));
+        LinearLayout head = Ui.hbox(c);
+        head.addView(Ui.muted(c, "Current stage"), Ui.lp(0, Ui.WRAP, 1f));
+        head.addView(Ui.text(c, "All stages", 13, R.color.primary, true));
+        card.addView(head);
         stageName = Ui.text(c, "", 18, R.color.text, true);
         card.addView(stageName);
         stageNext = Ui.muted(c, "");
@@ -133,6 +136,12 @@ final class FastScreen extends Screen {
         TextView note = Ui.text(c, "General information, not medical advice.", 11, R.color.text2, false);
         note.setPadding(0, Ui.dp(c, 6), 0, 0);
         card.addView(note);
+        Ui.clickable(card, 16);
+        card.setContentDescription("Current stage. Show all fasting stages");
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { a.push(new StagesScreen(a)); }
+        });
         return card;
     }
 
