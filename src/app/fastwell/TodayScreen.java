@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-/** Dashboard: fast status, calories vs target, today's training, and one state-aware action. */
+/** Dashboard: fast status, calories and water vs target, today's training, and one state-aware action. */
 final class TodayScreen extends Screen {
     private Views.Ring ring;
     private TextView fastTime, fastSub, ringPct;
@@ -42,7 +42,7 @@ final class TodayScreen extends Screen {
         col.addView(top);
 
         col.addView(fastCard());
-        col.addView(calorieCard());
+        col.addView(summaryCard());
         col.addView(trainingCard());
         col.addView(actions());
         return Ui.scroll(c, col);
@@ -105,31 +105,8 @@ final class TodayScreen extends Screen {
         }
     }
 
-    private View calorieCard() {
-        String today = Db.today();
-        double[] t = db.totalsForDay(today);
-        int target = prefs.kcalTarget();
-        LinearLayout card = Ui.card(c);
-        LinearLayout head = Ui.hbox(c);
-        head.addView(Ui.text(c, "Calories", 16, R.color.text, true), Ui.lp(0, Ui.WRAP, 1f));
-        double left = target - t[0];
-        head.addView(Ui.text(c, left >= 0 ? Ui.n0(left) + " left" : Ui.n0(-left) + " over", 14,
-                left >= 0 ? R.color.text2 : R.color.error, true));
-        card.addView(head);
-
-        LinearLayout big = Ui.hbox(c);
-        big.setGravity(Gravity.BOTTOM);
-        big.addView(Ui.big(c, Ui.n0(t[0]), 32, R.color.text));
-        TextView of = Ui.muted(c, "  / " + Ui.n0(target) + " kcal");
-        of.setPadding(0, 0, 0, Ui.dp(c, 6));
-        big.addView(of);
-        card.addView(big);
-
-        Views.Bar bar = new Views.Bar(c, Ui.col(c, t[0] > target ? R.color.error : R.color.eat), (float) (t[0] / target));
-        card.addView(bar, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 10), 0, 8, 0, 12));
-        card.addView(macroRow("Protein", t[1], prefs.proteinTarget(), R.color.protein));
-        card.addView(macroRow("Carbs", t[2], prefs.carbsTarget(), R.color.carbs));
-        card.addView(macroRow("Fat", t[3], prefs.fatTarget(), R.color.fat));
+    private View summaryCard() {
+        LinearLayout card = summaryCard(a, Db.today());
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -141,11 +118,46 @@ final class TodayScreen extends Screen {
         return card;
     }
 
-    private View macroRow(String name, double value, int target, int colorRes) {
-        return macroRow(a, name, value, target, colorRes);
+    /** A day's calories, macros and water against their targets; shown on both Today and Food. */
+    static LinearLayout summaryCard(MainActivity a, String day) {
+        double[] t = a.db.totalsForDay(day);
+        double water = 0;
+        for (Db.Food f : a.db.foodForDay(day)) if (f.meal == FastingLogic.WATER) water += FastingLogic.millilitres(f.amount);
+
+        LinearLayout card = Ui.card(a);
+        card.addView(total(a, R.drawable.ic_food, t[0], a.prefs.kcalTarget(), " kcal", R.color.eat, true),
+                Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 0, 0, 12));
+        card.addView(macroRow(a, "Protein", t[1], a.prefs.proteinTarget(), R.color.protein));
+        card.addView(macroRow(a, "Carbs", t[2], a.prefs.carbsTarget(), R.color.carbs));
+        card.addView(macroRow(a, "Fat", t[3], a.prefs.fatTarget(), R.color.fat));
+        card.addView(total(a, R.drawable.ic_stage_drop, water, a.prefs.waterTarget(), " ml", R.color.water, false),
+                Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 12, 0, 0));
+        return card;
     }
 
-    static View macroRow(MainActivity c, String name, double value, int target, int colorRes) {
+    /** An icon and big total against its target with what's left, over a thick bar; overIsBad turns going over red. */
+    private static View total(MainActivity c, int iconRes, double value, int target, String unit, int colorRes, boolean overIsBad) {
+        boolean bad = overIsBad && value > target;
+        LinearLayout box = Ui.vbox(c);
+        LinearLayout big = Ui.hbox(c);
+        big.setGravity(Gravity.BOTTOM);
+        big.addView(Ui.icon(c, iconRes, colorRes, 24), Ui.lpm(c, Ui.dp(c, 24), Ui.dp(c, 24), 0, 0, 8, 7));
+        big.addView(Ui.big(c, Ui.n0(value), 32, R.color.text));
+        TextView of = Ui.muted(c, "  / " + Ui.n0(target) + unit);
+        of.setPadding(0, 0, 0, Ui.dp(c, 6));
+        big.addView(of, Ui.lp(0, Ui.WRAP, 1f));
+        double left = target - value;
+        TextView leftT = Ui.text(c, left >= 0 ? Ui.n0(left) + " left" : Ui.n0(-left) + " over", 14,
+                bad ? R.color.error : R.color.text2, true);
+        leftT.setPadding(0, 0, 0, Ui.dp(c, 6));
+        big.addView(leftT);
+        box.addView(big);
+        box.addView(new Views.Bar(c, Ui.col(c, bad ? R.color.error : colorRes), (float) (value / target)),
+                Ui.lpm(c, Ui.MATCH, Ui.dp(c, 10), 0, 8, 0, 0));
+        return box;
+    }
+
+    private static View macroRow(MainActivity c, String name, double value, int target, int colorRes) {
         LinearLayout row = Ui.hbox(c);
         row.setPadding(0, Ui.dp(c, 3), 0, Ui.dp(c, 3));
         TextView n = Ui.text(c, name, 13, R.color.text2, false);

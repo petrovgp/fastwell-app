@@ -37,6 +37,9 @@ final class Prefs {
                 .putInt("carbs", carbs).putInt("fat", fat).apply();
     }
 
+    int waterTarget() { return p.getInt("water", FastingLogic.WATER_DEFAULT); }
+    void setWaterTarget(int ml) { p.edit().putInt("water", ml).apply(); }
+
     /** True once targets were set as a surplus/deficit and a percent split (the daily target step). */
     boolean hasMacroSplit() { return p.contains("pct_carbs"); }
     int kcalAdjust() { return p.getInt("kcal_adjust", 0); }

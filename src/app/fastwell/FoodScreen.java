@@ -51,28 +51,8 @@ final class FoodScreen extends Screen {
 
         String day = a.selectedDay.toString();
         List<Db.Food> foods = db.foodForDay(day);
-        double[] t = db.totalsForDay(day);
-        int target = prefs.kcalTarget();
 
-        LinearLayout sum = Ui.card(c);
-        LinearLayout big = Ui.hbox(c);
-        big.setGravity(Gravity.BOTTOM);
-        big.addView(Ui.big(c, Ui.n0(t[0]), 32, R.color.text));
-        TextView of = Ui.muted(c, "  / " + Ui.n0(target) + " kcal");
-        of.setPadding(0, 0, 0, Ui.dp(c, 6));
-        big.addView(of, Ui.lp(0, Ui.WRAP, 1f));
-        double left = target - t[0];
-        TextView leftT = Ui.text(c, left >= 0 ? Ui.n0(left) + " left" : Ui.n0(-left) + " over", 14,
-                left >= 0 ? R.color.text2 : R.color.error, true);
-        leftT.setPadding(0, 0, 0, Ui.dp(c, 6));
-        big.addView(leftT);
-        sum.addView(big);
-        sum.addView(new Views.Bar(c, Ui.col(c, t[0] > target ? R.color.error : R.color.eat), (float) (t[0] / target)),
-                Ui.lpm(c, Ui.MATCH, Ui.dp(c, 10), 0, 8, 0, 12));
-        sum.addView(TodayScreen.macroRow(a, "Protein", t[1], prefs.proteinTarget(), R.color.protein));
-        sum.addView(TodayScreen.macroRow(a, "Carbs", t[2], prefs.carbsTarget(), R.color.carbs));
-        sum.addView(TodayScreen.macroRow(a, "Fat", t[3], prefs.fatTarget(), R.color.fat));
-        body.addView(sum);
+        body.addView(TodayScreen.summaryCard(a, day));
 
         for (int m = 0; m < FastingLogic.MEALS.length; m++) {
             final int meal = m;

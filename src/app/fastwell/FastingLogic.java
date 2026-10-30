@@ -227,6 +227,8 @@ final class FastingLogic {
     static final String[] WATER_PRESETS = {"Small glass", "Large glass", "Small bottle", "Large bottle", "Water container"};
     static final int[] WATER_ML = {150, 250, 500, 1000, 0};
     static final int CUSTOM_WATER = 4;
+    /** Daily water target in ml, as set on its dial. */
+    static final int WATER_MIN = 500, WATER_MAX = 6000, WATER_STEP = 100, WATER_DEFAULT = 2500;
 
     /** Volume of an amount like "250 ml", or 0 when it isn't in millilitres. */
     static double millilitres(String amount) {

@@ -17,6 +17,7 @@
     <color name="protein">#2E5BFF</color>
     <color name="carbs">#F0A453</color>
     <color name="fat">#8E9AC8</color>
+    <color name="water">#1E9BD7</color>
     <color name="splash_bg">#FFFFFF</color>
     <color name="brand_navy">#0F1A44</color>
 </resources>

@@ -38,7 +38,12 @@ final class SettingsScreen extends Screen {
             public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.TARGETS)); }
         }));
         t.addView(Ui.divider(c));
-        t.addView(row("Profile", (prefs.male() ? "Male" : "Female") + ", " + prefs.age() + " y, " + prefs.heightCm() + " cm, "
+        t.addView(row("Daily water", Ui.n0(prefs.waterTarget()) + " ml", new Runnable() {
+            @Override
+            public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.WATER)); }
+        }));
+        t.addView(Ui.divider(c));
+        t.addView(row("Profile",(prefs.male() ? "Male" : "Female") + ", " + prefs.age() + " y, " + prefs.heightCm() + " cm, "
                 + Ui.n1(prefs.weightKg()) + " kg", new Runnable() {
             @Override
             public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.ABOUT)); }

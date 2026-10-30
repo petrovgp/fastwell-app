@@ -144,6 +144,11 @@ public class FastingLogicTest {
         eq("Water container", FastingLogic.waterName("a cup"), "unreadable amounts are a water container");
         eq(250.0, FastingLogic.millilitres(" 250 ml "), "millilitres parsed");
         eq(0.0, FastingLogic.millilitres("100 g"), "grams aren't millilitres");
+        // water target dial
+        eq(100, FastingLogic.WATER_STEP, "water target moves in 100 ml steps");
+        eq(0, (FastingLogic.WATER_MAX - FastingLogic.WATER_MIN) % FastingLogic.WATER_STEP, "water range ends on a step");
+        eq(0, (FastingLogic.WATER_DEFAULT - FastingLogic.WATER_MIN) % FastingLogic.WATER_STEP, "water default sits on a step");
+        eq(true, FastingLogic.WATER_DEFAULT >= FastingLogic.WATER_MIN && FastingLogic.WATER_DEFAULT <= FastingLogic.WATER_MAX, "water default in range");
         // food amounts
         eq(150.0, FastingLogic.grams(" 150 g "), "grams parsed");
         eq(150.5, FastingLogic.grams("150.5 g"), "decimal point");

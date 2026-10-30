@@ -16,11 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * First run, four steps: disclaimer, fasting plan, about you, daily target. Continue is pinned at the bottom.
- * Settings opens about you or daily target on its own, with the same layout.
+ * First run, five steps: disclaimer, fasting plan, about you, daily target, water target. Continue is pinned at the bottom.
+ * Settings opens about you, daily target or water target on its own, with the same layout.
  */
 final class OnboardingScreen extends Screen {
-    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3;
+    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4;
     /** Largest calorie surplus or deficit, in percent. */
     static final int ADJUST_MAX = 30;
 
@@ -40,17 +40,19 @@ final class OnboardingScreen extends Screen {
     private Dial macroDial;
     private TextView targetKcal, targetNote;
     private final TextView[] grams = new TextView[3];
+    private int waterMl;
 
-    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS}, false, 0); }
+    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS, WATER}, false, 0); }
 
     private OnboardingScreen(MainActivity a, int[] steps, boolean settings, int step) {
         super(a);
         this.steps = steps;
         this.settings = settings;
         this.step = step;
+        waterMl = prefs.waterTarget();
     }
 
-    /** A single step (ABOUT or TARGETS) opened from Settings. */
+    /** A single step (ABOUT, TARGETS or WATER) opened from Settings. */
     static OnboardingScreen fromSettings(MainActivity a, int kind) {
         return new OnboardingScreen(a, new int[] {kind}, true, 0);
     }
@@ -77,6 +79,7 @@ final class OnboardingScreen extends Screen {
             col = Ui.column(c, 24);
             if (kind == DISCLAIMER) disclaimer(col);
             else if (kind == PLAN) plans(col);
+            else if (kind == WATER) water(col);
             else about(col);
             root.addView(Ui.scroll(c, col), Ui.lp(Ui.MATCH, 0, 1f));
         }
@@ -85,7 +88,8 @@ final class OnboardingScreen extends Screen {
         bottom.setPadding(Ui.dp(c, 16), Ui.dp(c, 12), Ui.dp(c, 16), Ui.dp(c, 16));
         bottom.setBackgroundColor(Ui.col(c, R.color.bg));
         boolean last = step == steps.length - 1;
-        String label = !last ? "Continue" : !settings ? "Get started" : kind == ABOUT ? "Save profile" : "Save targets";
+        String label = !last ? "Continue" : !settings ? "Get started" : kind == ABOUT ? "Save profile"
+                : kind == WATER ? "Save target" : "Save targets";
         final Button next = Ui.primary(c, label, R.color.primary);
         next.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -347,6 +351,24 @@ final class OnboardingScreen extends Screen {
         prefs.setMacroSplit(adjust, split);
     }
 
+    // ---------- water target ----------
+
+    private void water(LinearLayout col) {
+        col.addView(title(c, "Water target"));
+        col.addView(subtitle(c, "How much do you want to drink each day? You can change this any time."));
+        Dial dial = new Dial(c);
+        dial.addColumn("WATER", "ml", FastingLogic.WATER_MIN, FastingLogic.WATER_MAX, FastingLogic.WATER_STEP, 0, waterMl);
+        dial.setFormat(0, new Dial.Format() {
+            @Override
+            public String of(double v) { return Ui.n0(v); }
+        });
+        dial.setListener(new Dial.Listener() {
+            @Override
+            public void onChange(int column, double value) { waterMl = (int) Math.round(value); }
+        });
+        col.addView(dial, Ui.lp(Ui.MATCH, Ui.WRAP));
+    }
+
     /** Small spaced caps header, styled like a dial column label. */
     private TextView dialLabel(String s, boolean faded) {
         TextView t = Ui.text(c, s, 12, R.color.primary, true);
@@ -379,6 +401,12 @@ final class OnboardingScreen extends Screen {
             a.rebuild();
             return;
         }
+        if (settings && steps[step] == WATER) {
+            prefs.setWaterTarget(waterMl);
+            a.pop();
+            a.snack("Water target set to " + Ui.n0(waterMl) + " ml", null);
+            return;
+        }
         form().saveProfile();
         if (settings) {
             boolean retarget = steps[step] == TARGETS || prefs.hasMacroSplit();
@@ -392,6 +420,7 @@ final class OnboardingScreen extends Screen {
             return;
         }
         saveTargets();
+        prefs.setWaterTarget(waterMl);
         prefs.setPlan(planId, customHours);
         prefs.setOnboarded(true);
         a.finishOnboarding();
