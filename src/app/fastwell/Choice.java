@@ -19,6 +19,7 @@ final class Choice {
     private final TextView lead, title, note;
     private final FrameLayout tick;
     private final boolean compact;
+    private String spoken;
     private boolean selected;
 
     private Choice(Context c, String leadText, View leadView, String titleText, String noteText, boolean compact) {
@@ -80,6 +81,15 @@ final class Choice {
         return new Choice(c, null, null, title, null, true);
     }
 
+    /** A toggle narrow enough for seven in a row, showing a day's letter and read out as its full name. */
+    static Choice dayToggle(Context c, String letter, String name) {
+        Choice ch = toggle(c, letter);
+        ch.view.setPadding(0, Ui.dp(c, 14), 0, Ui.dp(c, 14));
+        ch.spoken = name;
+        ch.apply();
+        return ch;
+    }
+
     Choice onClick(View.OnClickListener l) {
         view.setOnClickListener(l);
         return this;
@@ -119,7 +129,7 @@ final class Choice {
                 tick.addView(dot, new FrameLayout.LayoutParams(Ui.dp(c, 8), Ui.dp(c, 8), Gravity.CENTER));
             }
         }
-        view.setContentDescription(title.getText() + (note.getVisibility() == View.VISIBLE ? ", " + note.getText() : "")
+        view.setContentDescription((spoken != null ? spoken : title.getText()) + (note.getVisibility() == View.VISIBLE ? ", " + note.getText() : "")
                 + (selected ? ", selected" : ""));
         view.setSelected(selected);
     }

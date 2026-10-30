@@ -13,8 +13,10 @@ import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /** Targets, profile, plan, notifications, backup and data deletion. */
 final class SettingsScreen extends Screen {
@@ -41,6 +43,13 @@ final class SettingsScreen extends Screen {
         t.addView(row("Daily water", Ui.n0(prefs.waterTarget()) + " ml", new Runnable() {
             @Override
             public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.WATER)); }
+        }));
+        t.addView(Ui.divider(c));
+        String rest = FastingLogic.restDayNames(prefs.restDays(), WeekFields.of(Locale.getDefault()).getFirstDayOfWeek(), Locale.getDefault());
+        t.addView(row("Daily workouts", prefs.workoutTarget() + FastingLogic.sessions(prefs.workoutTarget())
+                + (rest.isEmpty() ? "" : "  -  Rest: " + rest), new Runnable() {
+            @Override
+            public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.WORKOUTS)); }
         }));
         t.addView(Ui.divider(c));
         t.addView(row("Profile",(prefs.male() ? "Male" : "Female") + ", " + prefs.age() + " y, " + prefs.heightCm() + " cm, "
@@ -248,7 +257,7 @@ final class SettingsScreen extends Screen {
             update();
         }
 
-        private static View label(MainActivity c, String title, String sub) {
+        static View label(MainActivity c, String title, String sub) {
             LinearLayout l = Ui.vbox(c);
             l.setPadding(Ui.dp(c, 4), Ui.dp(c, 16), 0, Ui.dp(c, 8));
             l.addView(Ui.text(c, title, 15, R.color.text, true));

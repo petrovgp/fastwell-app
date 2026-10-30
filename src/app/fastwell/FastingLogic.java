@@ -1,8 +1,10 @@
 package app.fastwell;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -229,6 +231,28 @@ final class FastingLogic {
     static final int CUSTOM_WATER = 4;
     /** Daily water target in ml, as set on its dial. */
     static final int WATER_MIN = 500, WATER_MAX = 6000, WATER_STEP = 100, WATER_DEFAULT = 2500;
+    /** Daily workout target in sessions, as set on its dial. */
+    static final int WORKOUT_MIN = 1, WORKOUT_MAX = 6, WORKOUT_DEFAULT = 1;
+
+    /** The unit after a count of n workouts. */
+    static String sessions(int n) { return n == 1 ? " session" : " sessions"; }
+
+    /** A weekday's bit in the rest days mask. */
+    static int restBit(DayOfWeek d) { return 1 << (d.getValue() - 1); }
+
+    static boolean isRestDay(int restDays, LocalDate day) { return (restDays & restBit(day.getDayOfWeek())) != 0; }
+
+    /** Short names of the rest days like "Sat, Sun", in week order from first. */
+    static String restDayNames(int restDays, DayOfWeek first, Locale locale) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 7; i++) {
+            DayOfWeek d = first.plus(i);
+            if ((restDays & restBit(d)) == 0) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(d.getDisplayName(TextStyle.SHORT, locale));
+        }
+        return sb.toString();
+    }
 
     /** Volume of an amount like "250 ml", or 0 when it isn't in millilitres. */
     static double millilitres(String amount) {

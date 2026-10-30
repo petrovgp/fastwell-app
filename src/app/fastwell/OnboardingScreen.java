@@ -12,15 +12,19 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.time.DayOfWeek;
+import java.time.format.TextStyle;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
- * First run, five steps: disclaimer, fasting plan, about you, daily target, water target. Continue is pinned at the bottom.
- * Settings opens about you, daily target or water target on its own, with the same layout.
+ * First run, six steps: disclaimer, fasting plan, about you, daily target, water target, workout target. Continue is pinned at the bottom.
+ * Settings opens about you, daily target, water target or workout target on its own, with the same layout.
  */
 final class OnboardingScreen extends Screen {
-    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4;
+    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4, WORKOUTS = 5;
     /** Largest calorie surplus or deficit, in percent. */
     static final int ADJUST_MAX = 30;
 
@@ -41,8 +45,10 @@ final class OnboardingScreen extends Screen {
     private TextView targetKcal, targetNote;
     private final TextView[] grams = new TextView[3];
     private int waterMl;
+    private int workouts;
+    private int restDays;
 
-    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS, WATER}, false, 0); }
+    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS, WATER, WORKOUTS}, false, 0); }
 
     private OnboardingScreen(MainActivity a, int[] steps, boolean settings, int step) {
         super(a);
@@ -50,9 +56,11 @@ final class OnboardingScreen extends Screen {
         this.settings = settings;
         this.step = step;
         waterMl = prefs.waterTarget();
+        workouts = prefs.workoutTarget();
+        restDays = prefs.restDays();
     }
 
-    /** A single step (ABOUT, TARGETS or WATER) opened from Settings. */
+    /** A single step (ABOUT, TARGETS, WATER or WORKOUTS) opened from Settings. */
     static OnboardingScreen fromSettings(MainActivity a, int kind) {
         return new OnboardingScreen(a, new int[] {kind}, true, 0);
     }
@@ -80,6 +88,7 @@ final class OnboardingScreen extends Screen {
             if (kind == DISCLAIMER) disclaimer(col);
             else if (kind == PLAN) plans(col);
             else if (kind == WATER) water(col);
+            else if (kind == WORKOUTS) workouts(col);
             else about(col);
             root.addView(Ui.scroll(c, col), Ui.lp(Ui.MATCH, 0, 1f));
         }
@@ -89,7 +98,7 @@ final class OnboardingScreen extends Screen {
         bottom.setBackgroundColor(Ui.col(c, R.color.bg));
         boolean last = step == steps.length - 1;
         String label = !last ? "Continue" : !settings ? "Get started" : kind == ABOUT ? "Save profile"
-                : kind == WATER ? "Save target" : "Save targets";
+                : kind == WATER || kind == WORKOUTS ? "Save target" : "Save targets";
         final Button next = Ui.primary(c, label, R.color.primary);
         next.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -369,6 +378,41 @@ final class OnboardingScreen extends Screen {
         col.addView(dial, Ui.lp(Ui.MATCH, Ui.WRAP));
     }
 
+    // ---------- workout target ----------
+
+    private void workouts(LinearLayout col) {
+        col.addView(title(c, "Workout target"));
+        col.addView(subtitle(c, "How many workouts do you want to do each day? You can change this any time."));
+        Dial dial = new Dial(c);
+        dial.addColumn("WORKOUTS", "per day", FastingLogic.WORKOUT_MIN, FastingLogic.WORKOUT_MAX, 1, 0, workouts);
+        dial.setListener(new Dial.Listener() {
+            @Override
+            public void onChange(int column, double value) { workouts = (int) Math.round(value); }
+        });
+        col.addView(dial, Ui.lp(Ui.MATCH, Ui.WRAP));
+
+        col.addView(SettingsScreen.ProfileForm.label(a, "Rest days", "No workout target on these days."));
+        LinearLayout days = Ui.hbox(c);
+        DayOfWeek first = WeekFields.of(Locale.getDefault()).getFirstDayOfWeek();
+        for (int i = 0; i < 7; i++) {
+            DayOfWeek d = first.plus(i);
+            final int bit = FastingLogic.restBit(d);
+            final Choice day = Choice.dayToggle(c, d.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    d.getDisplayName(TextStyle.FULL, Locale.getDefault()));
+            day.setSelected((restDays & bit) != 0);
+            day.onClick(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    restDays ^= bit;
+                    day.setSelected((restDays & bit) != 0);
+                }
+            });
+            if (i > 0) days.addView(Ui.hspace(c, 6));
+            days.addView(day.view, Ui.lp(0, Ui.WRAP, 1f));
+        }
+        col.addView(days, Ui.lp(Ui.MATCH, Ui.WRAP));
+    }
+
     /** Small spaced caps header, styled like a dial column label. */
     private TextView dialLabel(String s, boolean faded) {
         TextView t = Ui.text(c, s, 12, R.color.primary, true);
@@ -407,6 +451,12 @@ final class OnboardingScreen extends Screen {
             a.snack("Water target set to " + Ui.n0(waterMl) + " ml", null);
             return;
         }
+        if (settings && steps[step] == WORKOUTS) {
+            prefs.setWorkoutTarget(workouts, restDays);
+            a.pop();
+            a.snack("Workout target set to " + workouts + FastingLogic.sessions(workouts), null);
+            return;
+        }
         form().saveProfile();
         if (settings) {
             boolean retarget = steps[step] == TARGETS || prefs.hasMacroSplit();
@@ -421,6 +471,7 @@ final class OnboardingScreen extends Screen {
         }
         saveTargets();
         prefs.setWaterTarget(waterMl);
+        prefs.setWorkoutTarget(workouts, restDays);
         prefs.setPlan(planId, customHours);
         prefs.setOnboarded(true);
         a.finishOnboarding();

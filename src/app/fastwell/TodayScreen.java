@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-/** Dashboard: fast status, calories and water vs target, today's training, and one state-aware action. */
+/** Dashboard: fast status, calories, water and training vs target, and one state-aware action. */
 final class TodayScreen extends Screen {
     private Views.Ring ring;
     private TextView fastTime, fastSub, ringPct;
@@ -135,6 +135,19 @@ final class TodayScreen extends Screen {
         return card;
     }
 
+    /** A day's workout count against its target, or just "Rest day" on a rest day; shown on both Today and Workouts. */
+    static View workoutTotal(MainActivity a, LocalDate day, int done) {
+        if (FastingLogic.isRestDay(a.prefs.restDays(), day)) {
+            LinearLayout rest = Ui.hbox(a);
+            rest.setGravity(Gravity.CENTER_VERTICAL);
+            rest.addView(Ui.icon(a, R.drawable.ic_workout, R.color.train, 24), Ui.lpm(a, Ui.dp(a, 24), Ui.dp(a, 24), 0, 0, 8, 0));
+            rest.addView(Ui.text(a, "Rest day", 16, R.color.text, true));
+            return rest;
+        }
+        int target = a.prefs.workoutTarget();
+        return total(a, R.drawable.ic_workout, done, target, FastingLogic.sessions(target), R.color.train, false);
+    }
+
     /** An icon and big total against its target with what's left, over a thick bar; overIsBad turns going over red. */
     private static View total(MainActivity c, int iconRes, double value, int target, String unit, int colorRes, boolean overIsBad) {
         boolean bad = overIsBad && value > target;
@@ -174,12 +187,13 @@ final class TodayScreen extends Screen {
         LinearLayout card = Ui.card(c);
         card.addView(Ui.text(c, "Training", 16, R.color.text, true));
         List<Db.Workout> ws = db.workoutsForDay(Db.today());
-        if (ws.isEmpty()) {
-            TextView t = Ui.muted(c, "Rest day so far - no workouts logged.");
+        card.addView(workoutTotal(a, LocalDate.now(), ws.size()), Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 8, 0, 0));
+        if (!ws.isEmpty()) {
+            for (Db.Workout w : ws) card.addView(WorkoutsScreen.summaryRow(a, w, false));
+        } else if (!FastingLogic.isRestDay(prefs.restDays(), LocalDate.now())) {
+            TextView t = Ui.muted(c, "No workouts logged yet.");
             t.setPadding(0, Ui.dp(c, 6), 0, 0);
             card.addView(t);
-        } else {
-            for (Db.Workout w : ws) card.addView(WorkoutsScreen.summaryRow(a, w, false));
         }
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {

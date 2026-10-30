@@ -43,6 +43,9 @@ final class WorkoutsScreen extends Screen {
         col.addView(a.dateStrip());
 
         List<Db.Workout> ws = db.workoutsForDay(a.selectedDay.toString());
+        LinearLayout target = Ui.card(c);
+        target.addView(TodayScreen.workoutTotal(a, a.selectedDay, ws.size()));
+        col.addView(target);
         if (ws.isEmpty()) {
             LinearLayout empty = Ui.card(c);
             empty.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -59,7 +62,7 @@ final class WorkoutsScreen extends Screen {
                 mins += minutes(w);
                 if (w.type == Db.STRENGTH) vol += db.workoutStats(w.id)[2];
             }
-            TextView sum = Ui.muted(c, ws.size() + (ws.size() == 1 ? " session" : " sessions") + "  -  " + mins + " min"
+            TextView sum = Ui.muted(c, ws.size() + FastingLogic.sessions(ws.size()) + "  -  " + mins + " min"
                     + (vol > 0 ? "  -  " + Ui.n0(vol) + " kg lifted" : ""));
             sum.setPadding(Ui.dp(c, 4), 0, 0, Ui.dp(c, 8));
             col.addView(sum);

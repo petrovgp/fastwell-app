@@ -149,6 +149,29 @@ public class FastingLogicTest {
         eq(0, (FastingLogic.WATER_MAX - FastingLogic.WATER_MIN) % FastingLogic.WATER_STEP, "water range ends on a step");
         eq(0, (FastingLogic.WATER_DEFAULT - FastingLogic.WATER_MIN) % FastingLogic.WATER_STEP, "water default sits on a step");
         eq(true, FastingLogic.WATER_DEFAULT >= FastingLogic.WATER_MIN && FastingLogic.WATER_DEFAULT <= FastingLogic.WATER_MAX, "water default in range");
+        // workout target dial
+        eq(true, FastingLogic.WORKOUT_DEFAULT >= FastingLogic.WORKOUT_MIN && FastingLogic.WORKOUT_DEFAULT <= FastingLogic.WORKOUT_MAX, "workout default in range");
+        eq(" session", FastingLogic.sessions(1), "one session is singular");
+        eq(" sessions", FastingLogic.sessions(0), "no sessions is plural");
+        eq(" sessions", FastingLogic.sessions(6), "several sessions are plural");
+        // rest days: 2026-11-02 is a Monday
+        LocalDate monday = LocalDate.of(2026, 11, 2);
+        int weekend = FastingLogic.restBit(DayOfWeek.SATURDAY) | FastingLogic.restBit(DayOfWeek.SUNDAY);
+        eq(false, FastingLogic.isRestDay(0, monday), "no rest days tagged");
+        eq(false, FastingLogic.isRestDay(weekend, monday), "Monday isn't in the weekend");
+        eq(false, FastingLogic.isRestDay(weekend, monday.plusDays(4)), "Friday isn't in the weekend");
+        eq(true, FastingLogic.isRestDay(weekend, monday.plusDays(5)), "Saturday is a tagged rest day");
+        eq(true, FastingLogic.isRestDay(weekend, monday.plusDays(6)), "Sunday is a tagged rest day");
+        eq(false, FastingLogic.isRestDay(weekend, monday.plusDays(7)), "the tag repeats by weekday, not date");
+        int everyDay = 0;
+        for (DayOfWeek d : DayOfWeek.values()) {
+            eq(false, FastingLogic.isRestDay(everyDay, monday.plusDays(d.getValue() - 1)), d + " has its own bit");
+            everyDay |= FastingLogic.restBit(d);
+        }
+        for (int i = 0; i < 7; i++) eq(true, FastingLogic.isRestDay(everyDay, monday.plusDays(i)), "all seven days can rest");
+        eq("Sat, Sun", FastingLogic.restDayNames(weekend, DayOfWeek.MONDAY, Locale.ENGLISH), "rest days in week order");
+        eq("Sun, Sat", FastingLogic.restDayNames(weekend, DayOfWeek.SUNDAY, Locale.ENGLISH), "week order follows the first day");
+        eq("", FastingLogic.restDayNames(0, DayOfWeek.MONDAY, Locale.ENGLISH), "no rest days, no names");
         // food amounts
         eq(150.0, FastingLogic.grams(" 150 g "), "grams parsed");
         eq(150.5, FastingLogic.grams("150.5 g"), "decimal point");

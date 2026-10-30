@@ -40,6 +40,14 @@ final class Prefs {
     int waterTarget() { return p.getInt("water", FastingLogic.WATER_DEFAULT); }
     void setWaterTarget(int ml) { p.edit().putInt("water", ml).apply(); }
 
+    int workoutTarget() { return p.getInt("workouts", FastingLogic.WORKOUT_DEFAULT); }
+    /** Weekdays with no workout target, as FastingLogic.restBit bits. */
+    int restDays() { return p.getInt("rest_days", 0); }
+
+    void setWorkoutTarget(int sessions, int restDays) {
+        p.edit().putInt("workouts", sessions).putInt("rest_days", restDays).apply();
+    }
+
     /** True once targets were set as a surplus/deficit and a percent split (the daily target step). */
     boolean hasMacroSplit() { return p.contains("pct_carbs"); }
     int kcalAdjust() { return p.getInt("kcal_adjust", 0); }
