@@ -26,9 +26,7 @@ import java.util.List;
  * for food, or volume cards for water. Input lives in fields rather than views, so a rebuild (e.g. on resume) keeps it.
  */
 final class LogFoodScreen extends Screen {
-    private static final String[] WATER_NAMES = {"Small glass", "Large glass", "Small bottle", "Large bottle", "Custom"};
-    private static final int[] WATER_ML = {150, 250, 500, 1000, 0};
-    private static final int CUSTOM_WATER = 4;
+    private static final int CUSTOM_WATER = FastingLogic.CUSTOM_WATER;
     /** Search results shown at most, and how many fit before the list scrolls. */
     private static final int MAX_RESULTS = 50, VISIBLE_RESULTS = 5;
     /** Macro fields top to bottom, as indexes into the {carbs, protein, fat} arrays. */
@@ -474,10 +472,10 @@ final class LogFoodScreen extends Screen {
         sub.setPadding(Ui.dp(c, 4), 0, 0, Ui.dp(c, 12));
         l.addView(sub);
         waterCards.clear();
-        for (int i = 0; i < WATER_NAMES.length; i++) {
+        for (int i = 0; i < FastingLogic.WATER_PRESETS.length; i++) {
             final int w = i;
-            final Choice ch = Choice.card(c, waterBadge(i), WATER_NAMES[i],
-                    i == CUSTOM_WATER ? "Type any amount" : WATER_ML[i] + " ml");
+            final Choice ch = Choice.card(c, waterBadge(i), i == CUSTOM_WATER ? "Custom" : FastingLogic.WATER_PRESETS[i],
+                    i == CUSTOM_WATER ? "Type any amount" : FastingLogic.WATER_ML[i] + " ml");
             ch.onClick(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -534,7 +532,7 @@ final class LogFoodScreen extends Screen {
     }
 
     private int waterMl() {
-        return water == CUSTOM_WATER ? (int) Math.round(Ui.num(customMl, 0)) : WATER_ML[water];
+        return water == CUSTOM_WATER ? (int) Math.round(Ui.num(customMl, 0)) : FastingLogic.WATER_ML[water];
     }
 
     // ---------- note and add button ----------
@@ -576,7 +574,7 @@ final class LogFoodScreen extends Screen {
     private void add() {
         if (meal == FastingLogic.WATER) {
             Db.Food f = new Db.Food();
-            f.name = "Water";
+            f.name = FastingLogic.WATER_PRESETS[water];
             f.amount = waterMl() + " ml";
             f.zeroCal = true;
             commit(f);

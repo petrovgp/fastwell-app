@@ -34,7 +34,7 @@ final class FoodScreen extends Screen {
                 double ml = 0;
                 int n = 0;
                 for (Db.Food f : db.foodForDay(d.toString())) {
-                    if (f.meal == FastingLogic.WATER) ml += millilitres(f.amount);
+                    if (f.meal == FastingLogic.WATER) ml += FastingLogic.millilitres(f.amount);
                     else n++;
                 }
                 if (n == 0 && ml == 0) return "Nothing logged";
@@ -86,7 +86,7 @@ final class FoodScreen extends Screen {
             for (Db.Food f : foods) {
                 if (f.meal != m) continue;
                 kcal += f.kcal;
-                ml += millilitres(f.amount);
+                ml += FastingLogic.millilitres(f.amount);
             }
             String total = m == FastingLogic.WATER ? (ml > 0 ? Ui.n0(ml) + " ml" : "") : (kcal > 0 ? Ui.n0(kcal) + " kcal" : "");
             LinearLayout card = Ui.card(c);
@@ -154,7 +154,7 @@ final class FoodScreen extends Screen {
         r.setPadding(Ui.dp(c, 12), Ui.dp(c, 8), Ui.dp(c, 12), Ui.dp(c, 8));
         r.setBackground(Ui.round(Ui.alpha(Ui.col(c, R.color.text), 0.05f), Ui.dp(c, 10)));
         r.addView(Ui.text(c, f.name, 15, R.color.text, false), Ui.lp(0, Ui.WRAP, 1f));
-        String value = f.meal == FastingLogic.WATER ? Ui.n0(millilitres(f.amount)) + " ml" : Ui.n0(f.kcal) + " kcal";
+        String value = f.meal == FastingLogic.WATER ? Ui.n0(FastingLogic.millilitres(f.amount)) + " ml" : Ui.n0(f.kcal) + " kcal";
         TextView k = Ui.big(c, value, 15, R.color.text);
         k.setPadding(Ui.dp(c, 8), 0, 0, 0);
         r.addView(k);
@@ -234,17 +234,6 @@ final class FoodScreen extends Screen {
 
     void openAdd(int meal) {
         a.push(new LogFoodScreen(a, meal));
-    }
-
-    /** Volume of an amount like "250 ml", or 0 when it isn't in millilitres. */
-    private static double millilitres(String amount) {
-        String s = amount.trim();
-        if (!s.endsWith("ml")) return 0;
-        try {
-            return Double.parseDouble(s.substring(0, s.length() - 2).trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     private RadioGroup mealPicker(int checked, int count) {

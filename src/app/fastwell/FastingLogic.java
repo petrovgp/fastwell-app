@@ -223,6 +223,28 @@ final class FastingLogic {
     static final String[] MEALS = {"Breakfast", "Lunch", "Dinner", "Snacks", "Water"};
     /** Index in MEALS of the water category; the slots before it are food meals. */
     static final int WATER = 4;
+    /** What a water log is called, by preset; the last one is the custom amount. */
+    static final String[] WATER_PRESETS = {"Small glass", "Large glass", "Small bottle", "Large bottle", "Water container"};
+    static final int[] WATER_ML = {150, 250, 500, 1000, 0};
+    static final int CUSTOM_WATER = 4;
+
+    /** Volume of an amount like "250 ml", or 0 when it isn't in millilitres. */
+    static double millilitres(String amount) {
+        String s = amount.trim();
+        if (!s.endsWith("ml")) return 0;
+        try {
+            return Double.parseDouble(s.substring(0, s.length() - 2).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** Name for a water log that didn't record its preset: the preset of that volume, else custom. */
+    static String waterName(String amount) {
+        double ml = millilitres(amount);
+        for (int i = 0; i < CUSTOM_WATER; i++) if (ml == WATER_ML[i]) return WATER_PRESETS[i];
+        return WATER_PRESETS[CUSTOM_WATER];
+    }
 
     /** Hours of fasting attributed to each of the given days (by end day). */
     static double[] fastingHoursPerDay(List<long[]> startEnd, List<LocalDate> days, ZoneId zone) {

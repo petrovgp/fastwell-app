@@ -248,6 +248,8 @@ final class Db extends SQLiteOpenHelper {
         f.name = s(c, "name"); f.amount = s(c, "amount"); f.kcal = dbl(c, "kcal");
         f.protein = dbl(c, "protein"); f.carbs = dbl(c, "carbs"); f.fat = dbl(c, "fat");
         f.zeroCal = i(c, "zero_cal") != 0;
+        // Water used to be logged without its preset, so older entries and backups all say "Water".
+        if (f.meal == FastingLogic.WATER && f.name.equals("Water")) f.name = FastingLogic.waterName(f.amount);
         return f;
     }
 

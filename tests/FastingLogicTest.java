@@ -135,6 +135,15 @@ public class FastingLogicTest {
         eq(16.0, h[6], "16h attributed to end day");
         eq(0.0, h[5], "nothing on previous day");
         eq(4200.0, FastingLogic.volume(new int[]{10, 8, 8}, new double[]{100, 175, 225}), "volume");
+        // water log names
+        eq("Small glass", FastingLogic.waterName("150 ml"), "150 ml is a small glass");
+        eq("Large glass", FastingLogic.waterName("250 ml"), "250 ml is a large glass");
+        eq("Small bottle", FastingLogic.waterName("500 ml"), "500 ml is a small bottle");
+        eq("Large bottle", FastingLogic.waterName("1000 ml"), "1000 ml is a large bottle");
+        eq("Water container", FastingLogic.waterName("333 ml"), "other volumes are a water container");
+        eq("Water container", FastingLogic.waterName("a cup"), "unreadable amounts are a water container");
+        eq(250.0, FastingLogic.millilitres(" 250 ml "), "millilitres parsed");
+        eq(0.0, FastingLogic.millilitres("100 g"), "grams aren't millilitres");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }
