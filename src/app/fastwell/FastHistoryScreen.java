@@ -139,6 +139,13 @@ final class FastHistoryScreen extends Screen {
         });
         TextView title = Ui.text(c, month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())), 17, R.color.text, true);
         title.setGravity(Gravity.CENTER);
+        title.setPadding(0, Ui.dp(c, 10), 0, Ui.dp(c, 10));
+        title.setContentDescription(title.getText() + ", choose month");
+        Ui.clickable(title, 20);
+        title.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { a.push(monthPicker(byDay)); }
+        });
         nav.addView(prev);
         nav.addView(title, Ui.lp(0, Ui.WRAP, 1f));
         nav.addView(next);
@@ -191,6 +198,25 @@ final class FastHistoryScreen extends Screen {
             card.addView(t);
         }
         return card;
+    }
+
+    /** Month / year dial opened by tapping the calendar's month title; the year column reaches back to the oldest fast. */
+    private MonthPickerScreen monthPicker(final Map<LocalDate, List<Db.Fast>> byDay) {
+        int firstYear = YearMonth.now().getYear();
+        for (LocalDate d : byDay.keySet()) firstYear = Math.min(firstYear, d.getYear());
+        return new MonthPickerScreen(a, month, firstYear, new MonthPickerScreen.Summary() {
+            @Override
+            public String of(YearMonth m) {
+                int n = 0;
+                for (Map.Entry<LocalDate, List<Db.Fast>> e : byDay.entrySet()) {
+                    if (YearMonth.from(e.getKey()).equals(m)) n += e.getValue().size();
+                }
+                return n == 0 ? "No fasts" : n + (n == 1 ? " fast" : " fasts");
+            }
+        }, new MonthPickerScreen.Picked() {
+            @Override
+            public void on(YearMonth m) { month = m; }
+        });
     }
 
     private View dayCell(final LocalDate d, LocalDate today, List<Db.Fast> dayFasts) {
