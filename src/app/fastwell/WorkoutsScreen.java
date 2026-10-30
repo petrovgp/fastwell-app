@@ -40,12 +40,16 @@ final class WorkoutsScreen extends Screen {
         FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Workouts", "Strength and cardio"));
-        col.addView(a.dateStrip());
+        col.addView(a.dateStrip(true));
+        // Everything for the day itself, so it can slide in when the day changes.
+        LinearLayout body = Ui.vbox(c);
+        col.addView(body);
+        Ui.slideIn(body, a.daySlide, 48);
 
         List<Db.Workout> ws = db.workoutsForDay(a.selectedDay.toString());
         LinearLayout target = Ui.card(c);
         target.addView(TodayScreen.workoutTotal(a, a.selectedDay, ws.size()));
-        col.addView(target);
+        body.addView(target);
         if (ws.isEmpty()) {
             LinearLayout empty = Ui.card(c);
             empty.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -54,7 +58,7 @@ final class WorkoutsScreen extends Screen {
             t.setPadding(0, Ui.dp(c, 8), 0, Ui.dp(c, 4));
             empty.addView(t);
             empty.addView(Ui.muted(c, "Tap Start workout to log strength sets or a cardio session."));
-            col.addView(empty);
+            body.addView(empty);
         } else {
             int mins = 0;
             double vol = 0;
@@ -65,7 +69,7 @@ final class WorkoutsScreen extends Screen {
             TextView sum = Ui.muted(c, ws.size() + FastingLogic.sessions(ws.size()) + "  -  " + mins + " min"
                     + (vol > 0 ? "  -  " + Ui.n0(vol) + " kg lifted" : ""));
             sum.setPadding(Ui.dp(c, 4), 0, 0, Ui.dp(c, 8));
-            col.addView(sum);
+            body.addView(sum);
             for (final Db.Workout w : ws) {
                 LinearLayout card = Ui.card(c);
                 card.addView(summaryRow(a, w, true));
@@ -74,7 +78,7 @@ final class WorkoutsScreen extends Screen {
                     @Override
                     public void onClick(View v) { open(a, w); }
                 });
-                col.addView(card);
+                body.addView(card);
             }
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
