@@ -149,13 +149,14 @@ final class FastScreen extends Screen {
         LinearLayout card = Ui.card(c);
         LinearLayout head = Ui.hbox(c);
         head.addView(Ui.text(c, "Last 7 fasts", 16, R.color.text, true), Ui.lp(0, Ui.WRAP, 1f));
-        Button hist = Ui.flat(c, "History", R.color.primary);
-        hist.setOnClickListener(new View.OnClickListener() {
+        head.addView(Ui.text(c, "History", 13, R.color.primary, true));
+        card.addView(head);
+        Ui.clickable(card, 16);
+        card.setContentDescription("Last 7 fasts. Show fasting history");
+        card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { a.push(new FastHistoryScreen(a)); }
         });
-        head.addView(hist, Ui.lp(Ui.WRAP, Ui.dp(c, 40)));
-        card.addView(head);
         List<Db.Fast> fasts = db.completedFasts(7);
         if (fasts.isEmpty()) {
             card.addView(Ui.muted(c, "Your completed fasts will show here."));
