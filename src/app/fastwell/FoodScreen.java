@@ -47,7 +47,7 @@ final class FoodScreen extends Screen {
         String day = a.selectedDay.toString();
         List<Db.Food> foods = db.foodForDay(day);
 
-        body.addView(TodayScreen.summaryCard(a, day));
+        body.addView(TodayScreen.summaryCard(a, day, true));
 
         for (int m = 0; m < FastingLogic.MEALS.length; m++) {
             final int meal = m;

@@ -119,15 +119,18 @@ final class Views {
         }
     }
 
-    /** Vertical bar chart with x labels and an optional dashed target line. */
+    /** Vertical bar chart with x labels, an optional dashed target line and per-day raises above that line. */
     static final class Chart extends View {
         private final Paint bar = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint barHit = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint target = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint raise = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint raiseTop = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF r = new RectF();
         private float[] values = new float[0];
+        private float[] raised;
         private String[] labels = new String[0];
         private float targetValue;
         private boolean colorByTarget;
@@ -156,6 +159,16 @@ final class Views {
             invalidate();
         }
 
+        /** Shows how far each day's target rises above the target line; call after setData with one value per day. */
+        void setRaised(float[] extra, int color) {
+            raised = extra;
+            raise.setColor(Ui.alpha(color, 0.35f));
+            raiseTop.setColor(color);
+            invalidate();
+        }
+
+        private float raisedAt(int i) { return raised == null ? 0 : raised[i]; }
+
         @Override
         protected void onDraw(Canvas c) {
             int n = values.length;
@@ -165,6 +178,7 @@ final class Views {
             float h = getHeight() - labelH - top;
             float max = targetValue;
             for (float v : values) max = Math.max(max, v);
+            for (int i = 0; i < n; i++) max = Math.max(max, targetValue + raisedAt(i));
             if (max <= 0) max = 1;
             max *= 1.1f;
             float slot = getWidth() / (float) n;
@@ -182,6 +196,13 @@ final class Views {
                     boolean hit = colorByTarget && targetValue > 0 && values[i] >= targetValue;
                     c.drawRoundRect(r, rad, rad, hit ? barHit : bar);
                     if (bh > rad) c.drawRect(r.left, base - rad, r.right, base, hit ? barHit : bar);
+                }
+                if (targetValue > 0 && raisedAt(i) > 0) {
+                    // Over the bar, so the raise still shows on days that ate into it.
+                    float from = base - h * targetValue / max;
+                    float to = Math.min(base - h * (targetValue + raisedAt(i)) / max, from - Ui.dp(getContext(), 2));
+                    c.drawRect(cx - bw / 2, to, cx + bw / 2, from, raise);
+                    c.drawRect(cx - bw / 2, to, cx + bw / 2, to + Ui.dp(getContext(), 2), raiseTop);
                 }
                 if (i % step == 0 || i == n - 1) c.drawText(labels[i], cx, getHeight() - Ui.dp(getContext(), 4), label);
             }

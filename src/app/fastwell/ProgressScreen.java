@@ -67,7 +67,7 @@ final class ProgressScreen extends Screen {
         double[] fh = FastingLogic.fastingHoursPerDay(se, days, zone);
         int planH = prefs.plan().fastHours;
         col.addView(chartCard("Fasting hours", avgText(fh, "h") + "  -  goal " + planH + "h", fh, labels, planH,
-                R.color.primary, true));
+                R.color.primary, true, null));
 
         // Calories per day.
         Map<String, Double> kc = db.kcalByDay(from, to);
@@ -76,8 +76,13 @@ final class ProgressScreen extends Screen {
             Double v = kc.get(days.get(i).toString());
             kv[i] = v == null ? 0 : v;
         }
+        List<Db.Workout> ws = db.workoutsBetween(from, to);
+        double[] raised = new double[days.size()];
+        for (Db.Workout w : ws) {
+            for (int i = 0; i < days.size(); i++) if (w.day.equals(days.get(i).toString())) raised[i] += w.kcal;
+        }
         col.addView(chartCard("Calories", avgText(kv, " kcal") + "  -  target " + Ui.n0(prefs.kcalTarget()), kv, labels,
-                prefs.kcalTarget(), R.color.eat, false));
+                prefs.kcalTarget(), R.color.eat, false, raised));
 
         // Training volume per day + sessions.
         Map<String, Double> vol = db.volumeByDay(from, to);
@@ -86,7 +91,6 @@ final class ProgressScreen extends Screen {
             Double v = vol.get(days.get(i).toString());
             vv[i] = v == null ? 0 : v;
         }
-        List<Db.Workout> ws = db.workoutsBetween(from, to);
         int mins = 0, fasted = 0;
         for (Db.Workout w : ws) {
             mins += WorkoutsScreen.minutes(w);
@@ -94,7 +98,7 @@ final class ProgressScreen extends Screen {
         }
         String wsub = ws.size() + (ws.size() == 1 ? " session" : " sessions") + ", " + mins + " min"
                 + (ws.isEmpty() ? "" : ", " + fasted + " fasted");
-        col.addView(chartCard("Training volume (kg)", wsub, vv, labels, 0, R.color.train, false));
+        col.addView(chartCard("Training volume (kg)", wsub, vv, labels, 0, R.color.train, false, null));
 
         int logged = 0;
         for (int i = 0; i < days.size(); i++) if (fh[i] > 0 || kv[i] > 0 || vv[i] > 0) logged++;
@@ -126,7 +130,9 @@ final class ProgressScreen extends Screen {
         return "Avg " + (unit.equals("h") ? Ui.n1(sum / n) : Ui.n0(sum / n)) + unit + " on " + n + (n == 1 ? " day" : " days");
     }
 
-    private View chartCard(String title, String sub, double[] values, String[] labels, float target, int colorRes, boolean byTarget) {
+    /** raised, if not null, is how far workouts lifted each day's target; a legend explains it when any day has one. */
+    private View chartCard(String title, String sub, double[] values, String[] labels, float target, int colorRes, boolean byTarget,
+            double[] raised) {
         LinearLayout card = Ui.card(c);
         card.addView(Ui.text(c, title, 16, R.color.text, true));
         card.addView(Ui.muted(c, sub));
@@ -135,6 +141,26 @@ final class ProgressScreen extends Screen {
         Views.Chart chart = new Views.Chart(c, Ui.col(c, colorRes));
         chart.setData(f, labels, target, byTarget);
         card.addView(chart, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 150), 0, 12, 0, 0));
+        if (raised != null) {
+            float[] extra = new float[raised.length];
+            boolean any = false;
+            for (int i = 0; i < raised.length; i++) {
+                extra[i] = (float) raised[i];
+                any |= raised[i] > 0;
+            }
+            chart.setRaised(extra, Ui.col(c, R.color.train));
+            if (any) card.addView(raisedLegend());
+        }
         return card;
+    }
+
+    private View raisedLegend() {
+        LinearLayout row = Ui.hbox(c);
+        row.setPadding(0, Ui.dp(c, 8), 0, 0);
+        View swatch = new View(c);
+        swatch.setBackground(Ui.round(Ui.col(c, R.color.train), Ui.dp(c, 2)));
+        row.addView(swatch, Ui.lpm(c, Ui.dp(c, 12), Ui.dp(c, 12), 0, 0, 6, 0));
+        row.addView(Ui.muted(c, "Target raised by workouts"));
+        return row;
     }
 }

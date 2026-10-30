@@ -202,6 +202,11 @@ public class FastingLogicTest {
             eq(true, FastingLogic.cardioKcal(i, 3600, 5, 80) > 0, "preset has a calorie estimate: " + FastingLogic.CARDIO[i]);
         }
         eq(0.0, FastingLogic.cardioKcal(FastingLogic.OTHER_CARDIO, 3600, 5, 80), "Other has no calorie estimate");
+        // daily targets raised by workout calories
+        eq(2360, FastingLogic.raisedTarget(2000, 2000, 360), "calories rise by what was burned");
+        eq(142, FastingLogic.raisedTarget(120, 2000, 360), "macros rise by the same percentage, rounded to whole grams");
+        eq(120, FastingLogic.raisedTarget(120, 2000, 0), "no workout leaves a target alone");
+        eq(120, FastingLogic.raisedTarget(120, 0, 360), "no calorie target leaves a macro alone");
         // workout durations
         eq("30 s", FastingLogic.workoutDur(30), "seconds only");
         eq("45 min", FastingLogic.workoutDur(45 * 60), "whole minutes");

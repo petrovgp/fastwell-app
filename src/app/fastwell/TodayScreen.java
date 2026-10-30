@@ -1,5 +1,6 @@
 package app.fastwell;
 
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -115,7 +116,7 @@ final class TodayScreen extends Screen {
     }
 
     private View summaryCard() {
-        LinearLayout card = summaryCard(a, Db.today());
+        LinearLayout card = summaryCard(a, Db.today(), false);
         fit(card, 2f);
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {
@@ -128,19 +129,30 @@ final class TodayScreen extends Screen {
         return card;
     }
 
-    /** A day's calories, macros and water against their targets; shown on both Today and Food. */
-    static LinearLayout summaryCard(MainActivity a, String day) {
+    /**
+     * A day's calories, macros and water against their targets, raised by that day's workouts; shown on both Today
+     * and Food. fullNote spells the raise out on its own line; otherwise it's a short tag that adds no height.
+     */
+    static LinearLayout summaryCard(MainActivity a, String day, boolean fullNote) {
         double[] t = a.db.totalsForDay(day);
         double water = 0;
         for (Db.Food f : a.db.foodForDay(day)) if (f.meal == FastingLogic.WATER) water += FastingLogic.millilitres(f.amount);
 
+        double burned = 0;
+        for (Db.Workout w : a.db.workoutsForDay(day)) burned += w.kcal;
+        int kcal = a.prefs.kcalTarget();
+
         LinearLayout card = Ui.card(a);
-        card.addView(total(a, R.drawable.ic_food, t[0], a.prefs.kcalTarget(), " kcal", R.color.eat, true),
-                Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 0, 0, 12));
-        card.addView(macroRow(a, "Protein", t[1], a.prefs.proteinTarget(), R.color.protein));
-        card.addView(macroRow(a, "Carbs", t[2], a.prefs.carbsTarget(), R.color.carbs));
-        card.addView(macroRow(a, "Fat", t[3], a.prefs.fatTarget(), R.color.fat));
-        card.addView(total(a, R.drawable.ic_stage_drop, water, a.prefs.waterTarget(), " ml", R.color.water, false),
+        String tag = burned > 0 && !fullNote ? "+" + Ui.n0(burned) + " workouts" : null;
+        card.addView(total(a, R.drawable.ic_food, t[0], FastingLogic.raisedTarget(kcal, kcal, burned), " kcal", R.color.eat, true, tag),
+                Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 0, 0, burned > 0 && fullNote ? 6 : 12));
+        if (burned > 0 && fullNote) {
+            card.addView(Ui.muted(a, "Includes " + Ui.n0(burned) + " kcal from workouts"), Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 0, 0, 12));
+        }
+        card.addView(macroRow(a, "Protein", t[1], FastingLogic.raisedTarget(a.prefs.proteinTarget(), kcal, burned), R.color.protein));
+        card.addView(macroRow(a, "Carbs", t[2], FastingLogic.raisedTarget(a.prefs.carbsTarget(), kcal, burned), R.color.carbs));
+        card.addView(macroRow(a, "Fat", t[3], FastingLogic.raisedTarget(a.prefs.fatTarget(), kcal, burned), R.color.fat));
+        card.addView(total(a, R.drawable.ic_stage_drop, water, a.prefs.waterTarget(), " ml", R.color.water, false, null),
                 Ui.lpm(a, Ui.MATCH, Ui.WRAP, 0, 12, 0, 0));
         return card;
     }
@@ -155,20 +167,30 @@ final class TodayScreen extends Screen {
             return rest;
         }
         int target = a.prefs.workoutTarget();
-        return total(a, R.drawable.ic_workout, done, target, FastingLogic.sessions(target), R.color.train, false);
+        return total(a, R.drawable.ic_workout, done, target, FastingLogic.sessions(target), R.color.train, false, null);
     }
 
-    /** An icon and big total against its target with what's left, over a thick bar; overIsBad turns going over red. */
-    private static View total(MainActivity c, int iconRes, double value, int target, String unit, int colorRes, boolean overIsBad) {
+    /**
+     * An icon and big total against its target with what's left, over a thick bar; overIsBad turns going over red.
+     * A tag sits under the target, where two small lines are no taller than the big total.
+     */
+    private static View total(MainActivity c, int iconRes, double value, int target, String unit, int colorRes, boolean overIsBad, String tag) {
         boolean bad = overIsBad && value > target;
         LinearLayout box = Ui.vbox(c);
         LinearLayout big = Ui.hbox(c);
         big.setGravity(Gravity.BOTTOM);
         big.addView(Ui.icon(c, iconRes, colorRes, 24), Ui.lpm(c, Ui.dp(c, 24), Ui.dp(c, 24), 0, 0, 8, 7));
         big.addView(Ui.big(c, Ui.n0(value), 32, R.color.text));
-        TextView of = Ui.muted(c, "  / " + Ui.n0(target) + unit);
-        of.setPadding(0, 0, 0, Ui.dp(c, 6));
-        big.addView(of, Ui.lp(0, Ui.WRAP, 1f));
+        LinearLayout ofBox = Ui.vbox(c);
+        ofBox.setPadding(0, 0, 0, Ui.dp(c, 6));
+        ofBox.addView(Ui.muted(c, "  / " + Ui.n0(target) + unit));
+        if (tag != null) {
+            TextView t = Ui.text(c, "  " + tag, 13, R.color.train, false);
+            t.setSingleLine(true);
+            t.setEllipsize(TextUtils.TruncateAt.END);
+            ofBox.addView(t);
+        }
+        big.addView(ofBox, Ui.lp(0, Ui.WRAP, 1f));
         double left = target - value;
         TextView leftT = Ui.text(c, left >= 0 ? Ui.n0(left) + " left" : Ui.n0(-left) + " over", 14,
                 bad ? R.color.error : R.color.text2, true);

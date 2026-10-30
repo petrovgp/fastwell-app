@@ -256,6 +256,12 @@ final class FastingLogic {
         return workoutKcal(STRENGTH_MET, seconds, rpe, weightKg);
     }
 
+    /** A daily calorie or macro target, raised by the share of the calorie target that workouts burned. */
+    static int raisedTarget(int target, int kcalTarget, double burned) {
+        if (kcalTarget <= 0) return target;
+        return (int) Math.round(target * (1 + burned / kcalTarget));
+    }
+
     /** A workout's length, leaving out any part that is zero: "1 h 5 min", "12 min 30 s". */
     static String workoutDur(int seconds) {
         int h = seconds / 3600, m = seconds / 60 % 60, s = seconds % 60;
