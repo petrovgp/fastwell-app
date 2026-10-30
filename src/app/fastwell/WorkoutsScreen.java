@@ -57,7 +57,7 @@ final class WorkoutsScreen extends Screen {
             TextView t = Ui.body(c, "No workouts logged for this day.");
             t.setPadding(0, Ui.dp(c, 8), 0, Ui.dp(c, 4));
             empty.addView(t);
-            empty.addView(Ui.muted(c, "Tap Start workout to log strength sets or a cardio session."));
+            empty.addView(Ui.muted(c, "Tap Add workout to log strength sets or a cardio session."));
             body.addView(empty);
         } else {
             int mins = 0;
@@ -82,12 +82,14 @@ final class WorkoutsScreen extends Screen {
             }
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        Button fab = Ui.fab(c, "Start workout", R.color.train);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { startDialog(); }
-        });
+        Button fab = Ui.fab(c, "Add workout", R.color.train);
         root.addView(fab);
+        new SpeedDial(root, fab, R.color.train, new String[] {"Cardio", "Strength training"}, new SpeedDial.Pick() {
+            @Override
+            public void on(int which) {
+                if (which == 0) cardioDialog(a, null); else startStrength();
+            }
+        });
         return root;
     }
 
@@ -129,20 +131,6 @@ final class WorkoutsScreen extends Screen {
         r.addView(mid, Ui.lp(0, Ui.WRAP, 1f));
         r.addView(Ui.chip(a, w.fasted ? "Fasted" : "Fed", w.fasted ? R.color.primary : R.color.eat));
         return r;
-    }
-
-    private void startDialog() {
-        new AlertDialog.Builder(c)
-                .setTitle("Start workout")
-                .setItems(new String[] {"Strength training  (sets, reps, weight)", "Cardio  (time, distance)"},
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int which) {
-                                if (which == 0) startStrength(); else cardioDialog(a, null);
-                            }
-                        })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private void startStrength() {

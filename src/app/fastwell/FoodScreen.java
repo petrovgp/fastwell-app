@@ -1,8 +1,6 @@
 package app.fastwell;
 
-import android.view.Gravity;
 import android.view.View;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -14,9 +12,6 @@ import java.util.List;
 
 /** Calorie journal for the selected day, grouped by meal; adding opens LogFoodScreen, tapping a log opens EditFoodScreen. */
 final class FoodScreen extends Screen {
-
-    private static final int DIAL_H = 48, DIAL_GAP = 12;
-    private FrameLayout dial;
 
     FoodScreen(MainActivity a) { super(a); }
 
@@ -40,7 +35,7 @@ final class FoodScreen extends Screen {
 
     @Override
     View build() {
-        final FrameLayout root = new FrameLayout(c);
+        FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Food", "Calories and macros"));
         col.addView(a.dateStrip(true));
@@ -109,16 +104,12 @@ final class FoodScreen extends Screen {
             body.addView(card);
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        final Button fab = Ui.fab(c, "Add food", R.color.eat);
-        dial = null;
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (dial != null) closeDial();
-                else openDial(root, fab);
-            }
-        });
+        Button fab = Ui.fab(c, "Add food", R.color.eat);
         root.addView(fab);
+        new SpeedDial(root, fab, R.color.eat, FastingLogic.MEALS, new SpeedDial.Pick() {
+            @Override
+            public void on(int meal) { openAdd(meal); }
+        });
         return root;
     }
 
@@ -138,72 +129,6 @@ final class FoodScreen extends Screen {
             public void onClick(View v) { a.push(new EditFoodScreen(a, f)); }
         });
         return r;
-    }
-
-    // ---------- category speed dial ----------
-
-    /** Stack of FAB-sized category buttons that rises out of the FAB; tapping outside closes it. */
-    private void openDial(FrameLayout root, Button fab) {
-        dial = new FrameLayout(c);
-        dial.setBackgroundColor(Ui.alpha(0xFF000000, 0.3f));
-        dial.setAlpha(0f);
-        dial.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { closeDial(); }
-        });
-        LinearLayout list = Ui.vbox(c);
-        int n = FastingLogic.MEALS.length, w = Math.round(fab.getWidth() * 0.9f), h = Ui.dp(c, DIAL_H);
-        int bg = Ui.shade(Ui.col(c, R.color.eat), 0.82f);
-        for (int i = 0; i < n; i++) {
-            final int meal = i;
-            Button b = Ui.fabShaped(c, FastingLogic.MEALS[i], bg, Ui.onColor(c, R.color.eat));
-            b.setSingleLine(true);
-            b.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    closeDial();
-                    openAdd(meal);
-                }
-            });
-            // Start stacked on the FAB, then rise into place; the bottom button moves first.
-            b.setTranslationY(rise(i, n));
-            b.setAlpha(0f);
-            b.animate().translationY(0).alpha(1f).setStartDelay((n - 1 - i) * 30L).setDuration(240)
-                    .setInterpolator(new DecelerateInterpolator(2f)).start();
-            list.addView(b, Ui.lpm(c, w, h, 0, 0, 0, DIAL_GAP));
-        }
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.END);
-        // Centred over the FAB; the last button's own bottom margin leaves the gap above the FAB.
-        lp.setMargins(0, 0, Ui.dp(c, 16) + (fab.getWidth() - w) / 2, Ui.dp(c, 16) + fab.getHeight());
-        dial.addView(list, lp);
-        // Below the FAB so it stays on top and can close the dial.
-        root.addView(dial, root.indexOfChild(fab), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        dial.animate().alpha(1f).setDuration(200).start();
-    }
-
-    /** Downward offset that puts dial button i (of n, top first) centred on the FAB. */
-    private int rise(int i, int n) {
-        return Ui.dp(c, (n - 1 - i) * (DIAL_H + DIAL_GAP) + DIAL_GAP + DIAL_H / 2f + 56 / 2f); // 56 = FAB height
-    }
-
-    private void closeDial() {
-        final FrameLayout d = dial;
-        if (d == null) return;
-        dial = null;
-        d.setClickable(false);
-        LinearLayout list = (LinearLayout) d.getChildAt(0);
-        int n = list.getChildCount();
-        for (int i = 0; i < n; i++) {
-            View b = list.getChildAt(i);
-            b.setEnabled(false);
-            b.animate().translationY(rise(i, n)).alpha(0f).setStartDelay(0).setDuration(360).start();
-        }
-        d.animate().alpha(0f).setDuration(400).withEndAction(new Runnable() {
-            @Override
-            public void run() {
-                if (d.getParent() != null) ((FrameLayout) d.getParent()).removeView(d);
-            }
-        }).start();
     }
 
     void openAdd(int meal) {
