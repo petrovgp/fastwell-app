@@ -2,7 +2,6 @@ package app.fastwell;
 
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -14,7 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-/** Dashboard: fast status, calories, water and training vs target, and one state-aware action. */
+/** Dashboard: fast status, calories, water and training vs target, sized to fit one screen. */
 final class TodayScreen extends Screen {
     private Views.Ring ring;
     private TextView fastTime, fastSub, ringPct;
@@ -24,7 +23,7 @@ final class TodayScreen extends Screen {
 
     @Override
     View build() {
-        LinearLayout col = Ui.column(c, 24);
+        LinearLayout col = Ui.column(c, 0);
         active = db.activeFast();
 
         LinearLayout top = Ui.hbox(c);
@@ -32,6 +31,7 @@ final class TodayScreen extends Screen {
         String greet = hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
         LinearLayout header = Ui.header(c, "Today",
                 greet + "  -  " + LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())));
+        header.setPadding(Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 8));
         top.addView(header, Ui.lp(0, Ui.WRAP, 1f));
         ImageView settings = Ui.iconButton(c, R.drawable.ic_settings, R.color.text2, "Settings");
         settings.setOnClickListener(new View.OnClickListener() {
@@ -44,8 +44,16 @@ final class TodayScreen extends Screen {
         col.addView(fastCard());
         col.addView(summaryCard());
         col.addView(trainingCard());
-        col.addView(actions());
+        // Still a ScrollView so a tiny screen or huge font scrolls rather than clipping; otherwise it all fits.
         return Ui.scroll(c, col);
+    }
+
+    /** Tightens a card and has it share the spare screen height, by weight, with its content centered. */
+    private void fit(LinearLayout card, float weight) {
+        int pad = Ui.dp(c, 12);
+        card.setPadding(pad, pad, pad, pad);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        ((LinearLayout.LayoutParams) card.getLayoutParams()).weight = weight;
     }
 
     private View fastCard() {
@@ -57,7 +65,7 @@ final class TodayScreen extends Screen {
         ringPct = Ui.text(c, "", 14, R.color.text, true);
         ringPct.setGravity(Gravity.CENTER);
         ringBox.addView(ringPct, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        row.addView(ringBox, Ui.lp(Ui.dp(c, 88), Ui.dp(c, 88)));
+        row.addView(ringBox, Ui.lp(Ui.dp(c, 72), Ui.dp(c, 72)));
         row.addView(Ui.hspace(c, 16));
 
         LinearLayout info = Ui.vbox(c);
@@ -71,6 +79,7 @@ final class TodayScreen extends Screen {
         info.addView(fastSub);
         row.addView(info, Ui.lp(0, Ui.WRAP, 1f));
         card.addView(row);
+        fit(card, 1f);
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -107,6 +116,7 @@ final class TodayScreen extends Screen {
 
     private View summaryCard() {
         LinearLayout card = summaryCard(a, Db.today());
+        fit(card, 2f);
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -185,16 +195,22 @@ final class TodayScreen extends Screen {
 
     private View trainingCard() {
         LinearLayout card = Ui.card(c);
-        card.addView(Ui.text(c, "Training", 16, R.color.text, true));
         List<Db.Workout> ws = db.workoutsForDay(Db.today());
-        card.addView(workoutTotal(a, LocalDate.now(), ws.size()), Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 8, 0, 0));
+        card.addView(workoutTotal(a, LocalDate.now(), ws.size()));
         if (!ws.isEmpty()) {
-            for (Db.Workout w : ws) card.addView(WorkoutsScreen.summaryRow(a, w, false));
+            // Only the latest, so a busy day can't push the screen past one page.
+            card.addView(WorkoutsScreen.summaryRow(a, ws.get(ws.size() - 1), false));
+            if (ws.size() > 1) {
+                TextView more = Ui.muted(c, "+ " + (ws.size() - 1) + " more");
+                more.setPadding(0, Ui.dp(c, 4), 0, 0);
+                card.addView(more);
+            }
         } else if (!FastingLogic.isRestDay(prefs.restDays(), LocalDate.now())) {
             TextView t = Ui.muted(c, "No workouts logged yet.");
             t.setPadding(0, Ui.dp(c, 6), 0, 0);
             card.addView(t);
         }
+        fit(card, 1f);
         Ui.clickable(card, 16);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -204,47 +220,5 @@ final class TodayScreen extends Screen {
             }
         });
         return card;
-    }
-
-    private View actions() {
-        LinearLayout row = Ui.hbox(c);
-        row.setPadding(0, Ui.dp(c, 4), 0, 0);
-        if (active != null) {
-            Button end = Ui.primary(c, "End fast", R.color.primary);
-            end.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { a.push(new EndFastScreen(a, active)); }
-            });
-            row.addView(end, Ui.lp(0, Ui.dp(c, 52), 1f));
-            row.addView(Ui.hspace(c, 12));
-            Button log = Ui.outline(c, "Log food", R.color.eat);
-            log.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { openFood(); }
-            });
-            row.addView(log, Ui.lp(0, Ui.dp(c, 52), 1f));
-        } else {
-            Button start = Ui.outline(c, "Start fast", R.color.primary);
-            start.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { a.startFast(); }
-            });
-            row.addView(start, Ui.lp(0, Ui.dp(c, 52), 1f));
-            row.addView(Ui.hspace(c, 12));
-            Button log = Ui.primary(c, "Log food", R.color.eat);
-            log.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { openFood(); }
-            });
-            row.addView(log, Ui.lp(0, Ui.dp(c, 52), 1f));
-        }
-        return row;
-    }
-
-    private void openFood() {
-        a.selectedDay = LocalDate.now();
-        a.showTab(MainActivity.TAB_FOOD);
-        Screen s = a.currentScreen();
-        if (s instanceof FoodScreen) ((FoodScreen) s).openAdd(-1);
     }
 }
