@@ -204,7 +204,12 @@ final class Views {
                     c.drawRect(cx - bw / 2, to, cx + bw / 2, from, raise);
                     c.drawRect(cx - bw / 2, to, cx + bw / 2, to + Ui.dp(getContext(), 2), raiseTop);
                 }
-                if (i % step == 0 || i == n - 1) c.drawText(labels[i], cx, getHeight() - Ui.dp(getContext(), 4), label);
+                if (i % step == 0 || i == n - 1) {
+                    // Month slots are narrower than two digits, so keep the edge labels inside the view.
+                    float half = label.measureText(labels[i]) / 2;
+                    float x = Math.max(half, Math.min(cx, getWidth() - half));
+                    c.drawText(labels[i], x, getHeight() - Ui.dp(getContext(), 4), label);
+                }
             }
             if (targetValue > 0) {
                 float y = base - h * targetValue / max;
