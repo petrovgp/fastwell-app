@@ -294,7 +294,13 @@ public class MainActivity extends Activity {
             label.setPadding(0, Ui.dp(this, 4), 0, 0);
             item.addView(label);
             item.setContentDescription(TAB_LABELS[i]);
-            Ui.clickable(item, 8);
+            // The press ripple lives on the pill so it lands where the selection bubble does.
+            Ui.clickable(pill, 16);
+            pill.setClickable(false);
+            pill.setFocusable(false);
+            pill.setDuplicateParentStateEnabled(true);
+            item.setClickable(true);
+            item.setFocusable(true);
             item.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) { showTab(t); }
