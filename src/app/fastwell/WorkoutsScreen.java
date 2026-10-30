@@ -84,7 +84,7 @@ final class WorkoutsScreen extends Screen {
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         Button fab = Ui.fab(c, "Add workout", R.color.train);
         root.addView(fab);
-        new SpeedDial(root, fab, R.color.train, new String[] {"Cardio", "Strength training"}, new SpeedDial.Pick() {
+        new SpeedDial(root, fab, R.color.train, new String[] {"Cardio", "Strength"}, new SpeedDial.Pick() {
             @Override
             public void on(int which) {
                 if (which == 0) cardioDialog(a, null); else startStrength();

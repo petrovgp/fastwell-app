@@ -49,7 +49,7 @@ final class SpeedDial {
             public void onClick(View v) { close(); }
         });
         LinearLayout list = Ui.vbox(c);
-        int n = labels.length, w = Math.round(fab.getWidth() * 0.9f);
+        int n = labels.length, w = Math.round(fab.getWidth() * 0.9f), h = Ui.dp(c, H);
         int bg = Ui.shade(Ui.col(c, colorRes), 0.82f);
         for (int i = 0; i < n; i++) {
             final int index = i;
@@ -67,15 +67,11 @@ final class SpeedDial {
             b.setAlpha(0f);
             b.animate().translationY(0).alpha(1f).setStartDelay((n - 1 - i) * 30L).setDuration(240)
                     .setInterpolator(new DecelerateInterpolator(2f)).start();
-            // A label longer than the FAB widens every button, so it is never cut off.
-            b.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-            w = Math.max(w, b.getMeasuredWidth());
-            list.addView(b);
+            list.addView(b, Ui.lpm(c, w, h, 0, 0, 0, GAP));
         }
-        for (int i = 0; i < n; i++) list.getChildAt(i).setLayoutParams(Ui.lpm(c, w, Ui.dp(c, H), 0, 0, 0, GAP));
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.END);
         // Centred over the FAB; the last button's own bottom margin leaves the gap above the FAB.
-        lp.setMargins(0, 0, Math.max(0, Ui.dp(c, 16) + (fab.getWidth() - w) / 2), Ui.dp(c, 16) + fab.getHeight());
+        lp.setMargins(0, 0, Ui.dp(c, 16) + (fab.getWidth() - w) / 2, Ui.dp(c, 16) + fab.getHeight());
         dial.addView(list, lp);
         // Below the FAB so it stays on top and can close the dial.
         root.addView(dial, root.indexOfChild(fab), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
