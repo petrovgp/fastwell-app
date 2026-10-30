@@ -35,21 +35,22 @@ final class Notifier {
         nm.createNotificationChannel(rem);
     }
 
-    private static PendingIntent openApp(Context c, int tab) {
+    static PendingIntent openApp(Context c, int tab) {
         Intent i = new Intent(c, MainActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         i.putExtra(MainActivity.EXTRA_TAB, tab);
         return PendingIntent.getActivity(c, 100 + tab, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private static PendingIntent receiver(Context c, String action) {
+    static PendingIntent receiver(Context c, String action) {
         Intent i = new Intent(c, FastReceiver.class);
         i.setAction(action);
         return PendingIntent.getBroadcast(c, action.hashCode(), i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    /** Re-syncs the ongoing notification and the goal alarm with the database. Safe to call any time. */
+    /** Re-syncs the widget, the ongoing notification and the goal alarm with the database. Safe to call any time. */
     static void refresh(Context c) {
+        FastWidget.refresh(c);
         ensureChannels(c);
         Prefs prefs = new Prefs(c);
         Db.Fast f = Db.get(c).activeFast();
@@ -88,7 +89,8 @@ final class Notifier {
             nm.cancel(ID_ONGOING);
         }
 
-        if (prefs.goalNotif() && goalAt > now) {
+        // Set even with the reminder off: the widget switches to goal reached on this alarm.
+        if (goalAt > now) {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, goalAt, goalPi);
         }
     }

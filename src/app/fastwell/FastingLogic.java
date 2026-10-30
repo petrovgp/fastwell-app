@@ -214,6 +214,53 @@ final class FastingLogic {
         return String.format(Locale.US, "%d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60);
     }
 
+    /** What the Fast screen and the home-screen widget show around the clock. */
+    static final class Status {
+        final float progress;
+        final String label, remaining, stage, next;
+
+        Status(float progress, String label, String remaining, String stage, String next) {
+            this.progress = progress;
+            this.label = label;
+            this.remaining = remaining;
+            this.stage = stage;
+            this.next = next;
+        }
+    }
+
+    static Status fasting(long elapsedMs, long goalMs) {
+        float p = elapsedMs / (float) goalMs;
+        int idx = stageIndex(elapsedMs / 3_600_000.0);
+        String next = "Fasts this long should be medically supervised.";
+        if (idx + 1 < STAGE_HOURS.length) {
+            long nextAt = STAGE_HOURS[idx + 1] * 3_600_000L;
+            next = "Next: " + STAGE_NAMES[idx + 1] + " in " + dur(nextAt - elapsedMs);
+        }
+        return new Status(p,
+                p >= 1 ? "Goal reached" : "Elapsed  -  " + Math.min(100, (int) (p * 100)) + "%",
+                p >= 1 ? "+" + dur(elapsedMs - goalMs) + " over goal" : dur(goalMs - elapsedMs) + " to go",
+                STAGE_NAMES[idx], next);
+    }
+
+    static Status notFasting(int goalHours) {
+        return new Status(0, "Not fasting", "Goal " + goalHours + " hours", "Eating window",
+                "Start a fast after your last meal of the day.");
+    }
+
+    /** The next whole minute of a fast, when its minute-based text next changes. */
+    static long nextMinute(long now, long startAt) {
+        return now + 60_000L - (now - startAt) % 60_000L;
+    }
+
+    /** Space in widget_fast.xml around the ring: its side padding, and its top and bottom padding plus the stage text. */
+    private static final int WIDGET_SPARE_WIDTH_DP = 16, WIDGET_SPARE_HEIGHT_DP = 99;
+
+    /** Ring size that fills a widget tile of the given size; launchers may report 0 for a size they don't know. */
+    static int widgetRingDp(int widthDp, int heightDp) {
+        if (widthDp <= 0 || heightDp <= 0) return 170;
+        return Math.max(120, Math.min(widthDp - WIDGET_SPARE_WIDTH_DP, heightDp - WIDGET_SPARE_HEIGHT_DP));
+    }
+
     /** Meal slot from local hour: 0 breakfast, 1 lunch, 2 dinner, 3 snacks. */
     static int mealForHour(int hour) {
         if (hour >= 4 && hour < 11) return 0;

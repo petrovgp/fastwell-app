@@ -26,5 +26,6 @@ The signing key `keystore/fastwell.jks` is deliberately not in the repo. Put you
 - `Db` – SQLite schema and queries (fasts, food entries, food cache, exercises, workouts, sets)
 - `FastingLogic` – plans, stages, calorie formula, streaks (pure Java, unit-tested)
 - `Notifier`, `FastReceiver`, `BootReceiver` – live timer notification, goal alarm, "End fast" action, reboot restore
+- `FastWidget` – home-screen fasting timer, redrawn from `Notifier.refresh` and each minute of a fast
 - `Off` – Open Food Facts search and barcode lookup
 - Screens: `Onboarding`, `Today`, `Fast`, `FastHistory`, `Food`, `Workouts`, `LogWorkout`, `Progress`, `Settings`

@@ -181,31 +181,15 @@ final class FastScreen extends Screen {
     void tick() {
         if (ring == null) return;
         long now = System.currentTimeMillis();
-        if (active == null) {
-            ring.setProgress(0, false);
-            stateLabel.setText("Not fasting");
-            elapsed.setText("0:00:00");
-            remaining.setText("Goal " + prefs.plan().fastHours + " hours");
-            stageName.setText("Eating window");
-            stageNext.setText("Start a fast after your last meal of the day.");
-            return;
-        }
-        long d = active.durationMs(now);
-        float p = d / (float) active.goalMs();
-        ring.setProgress(p, true);
-        stateLabel.setText(p >= 1 ? "Goal reached" : "Elapsed  -  " + Math.min(100, (int) (p * 100)) + "%");
+        long d = active != null ? active.durationMs(now) : 0;
+        FastingLogic.Status s = active != null ? FastingLogic.fasting(d, active.goalMs())
+                : FastingLogic.notFasting(prefs.plan().fastHours);
+        ring.setProgress(s.progress, active != null);
+        stateLabel.setText(s.label);
         elapsed.setText(FastingLogic.hms(d));
-        remaining.setText(p >= 1 ? "+" + FastingLogic.dur(d - active.goalMs()) + " over goal"
-                : FastingLogic.dur(active.goalMs() - d) + " to go");
-        double hours = d / 3_600_000.0;
-        int idx = FastingLogic.stageIndex(hours);
-        stageName.setText(FastingLogic.STAGE_NAMES[idx]);
-        if (idx + 1 < FastingLogic.STAGE_HOURS.length) {
-            long nextAt = FastingLogic.STAGE_HOURS[idx + 1] * 3_600_000L;
-            stageNext.setText("Next: " + FastingLogic.STAGE_NAMES[idx + 1] + " in " + FastingLogic.dur(nextAt - d));
-        } else {
-            stageNext.setText("Fasts this long should be medically supervised.");
-        }
+        remaining.setText(s.remaining);
+        stageName.setText(s.stage);
+        stageNext.setText(s.next);
     }
 
     private void editStart() { a.push(new EditStartScreen(a, active)); }

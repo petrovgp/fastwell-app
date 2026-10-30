@@ -214,6 +214,51 @@ public class FastingLogicTest {
         eq("2 h", FastingLogic.workoutDur(7200), "whole hours");
         eq("1 h 5 min", FastingLogic.workoutDur(3900), "hours and minutes");
         eq("1 h 5 min 9 s", FastingLogic.workoutDur(3909), "hours, minutes and seconds");
+        // fast status text
+        long hour = 3_600_000L, min = 60_000L, goal16 = 16 * hour;
+        FastingLogic.Status st = FastingLogic.fasting(10 * hour + 43 * min + 20_000, goal16);
+        eq("Elapsed  -  67%", st.label, "percent while fasting");
+        eq("5h 16m to go", st.remaining, "time to go");
+        eq("Blood sugar settling", st.stage, "stage while fasting");
+        eq("Next: Fat-burning zone in 1h 16m", st.next, "next stage");
+        eq(true, st.progress > 0.66f && st.progress < 0.68f, "progress is a share of the goal");
+        st = FastingLogic.fasting(16 * hour - min, goal16);
+        eq("Elapsed  -  99%", st.label, "a minute short is not the goal");
+        eq("1m to go", st.remaining, "last minute to go");
+        st = FastingLogic.fasting(goal16, goal16);
+        eq("Goal reached", st.label, "goal reached on the exact minute");
+        eq("+0m over goal", st.remaining, "nothing over yet");
+        st = FastingLogic.fasting(16 * hour + 25 * min + 10_000, goal16);
+        eq("Goal reached", st.label, "goal stays reached");
+        eq("+25m over goal", st.remaining, "time over goal");
+        eq(true, st.progress > 1f, "progress keeps growing past the goal");
+        eq("Next: Ketosis ramping up in 1h 34m", st.next, "stages continue past the goal");
+        eq("Blood sugar settling", FastingLogic.fasting(12 * hour - min, goal16).stage, "stage before its boundary");
+        st = FastingLogic.fasting(12 * hour, goal16);
+        eq("Fat-burning zone", st.stage, "stage from its boundary");
+        eq("Next: Ketosis ramping up in 6h 00m", st.next, "full gap to the next stage");
+        st = FastingLogic.fasting(48 * hour, 72 * hour);
+        eq("Elapsed  -  66%", st.label, "long goal still counts up");
+        eq("24h 00m to go", st.remaining, "long goal time to go");
+        eq("Extended fast", st.stage, "last stage");
+        eq("Fasts this long should be medically supervised.", st.next, "no stage after the last");
+        st = FastingLogic.notFasting(18);
+        eq("Not fasting", st.label, "idle label");
+        eq("Goal 18 hours", st.remaining, "idle goal follows the plan");
+        eq("Eating window", st.stage, "idle stage");
+        eq("Start a fast after your last meal of the day.", st.next, "idle prompt");
+        eq(0f, st.progress, "idle ring is empty");
+        // next widget redraw, on the next whole minute of the fast
+        long fastStart = 1_000_000L;
+        eq(fastStart + 2 * min, FastingLogic.nextMinute(fastStart + min + 20_000, fastStart), "partway through a minute");
+        eq(fastStart + 2 * min, FastingLogic.nextMinute(fastStart + min, fastStart), "exactly on a minute moves to the next");
+        eq(fastStart + min, FastingLogic.nextMinute(fastStart, fastStart), "just started");
+        // widget ring size, leaving 16dp of width and 99dp of height for padding and the stage text
+        eq(241, FastingLogic.widgetRingDp(330, 340), "a square tile is limited by its height");
+        eq(184, FastingLogic.widgetRingDp(200, 400), "a tall tile is limited by its width");
+        eq(151, FastingLogic.widgetRingDp(250, 250), "smallest 4x4 tile");
+        eq(120, FastingLogic.widgetRingDp(100, 100), "the ring stays readable on a tiny tile");
+        eq(170, FastingLogic.widgetRingDp(0, 0), "launcher reported no size");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

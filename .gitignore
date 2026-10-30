@@ -40,3 +40,5 @@ out/
 sdk/
 # signing key - keep it private
 keystore/
+
+.superpowers
