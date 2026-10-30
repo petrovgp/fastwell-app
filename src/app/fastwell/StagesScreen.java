@@ -3,7 +3,6 @@ package app.fastwell;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -42,20 +41,13 @@ final class StagesScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout bar = Ui.hbox(c);
-        bar.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 16), Ui.dp(c, 4));
-        ImageView back = Ui.iconButton(c, R.drawable.ic_left, R.color.text, "Back");
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { a.handleBack(); }
-        });
-        bar.addView(back);
-        root.addView(bar);
+        LinearLayout header = FastHistoryScreen.backHeader(a, "Fasting stages");
+        header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
+        root.addView(header);
 
         active = db.activeFast();
         current = stageNow();
         LinearLayout col = Ui.column(c, 24);
-        col.addView(OnboardingScreen.title(c, "Fasting stages"));
         col.addView(OnboardingScreen.subtitle(c, "What generally happens in your body as a fast goes on. Everyone is different, so timings are approximate."));
         for (int i = 0; i < FastingLogic.STAGE_NAMES.length; i++) {
             col.addView(stageCard(i), Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 0, 0, 10));
