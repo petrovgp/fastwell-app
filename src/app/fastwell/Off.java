@@ -35,7 +35,7 @@ final class Off {
             public void run() {
                 try {
                     // The legacy cgi/search.pl endpoint now returns 503 for anonymous clients; use Search-a-licious.
-                    String url = "https://search.openfoodfacts.org/search?page_size=25"
+                    String url = "https://search.openfoodfacts.org/search?page_size=50"
                             + "&fields=" + FIELDS + "&q=" + URLEncoder.encode(query, "UTF-8");
                     JSONObject o = new JSONObject(get(url));
                     JSONArray arr = o.optJSONArray("hits");

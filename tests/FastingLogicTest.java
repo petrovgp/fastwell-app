@@ -63,6 +63,30 @@ public class FastingLogicTest {
         order = new int[]{2, 1, 0};
         FastingLogic.rebalance(pct, 0, order);
         eq("[50, 25, 25]", Arrays.toString(pct), "lowering gives to least recent other");
+        // food macro guessing: grams are {carbs, protein, fat}
+        double[] gr = {0, 20, 0}; // 300 kcal, protein typed as 20 g
+        order = new int[]{0, 2, 1};
+        eq(300.0, FastingLogic.balanceGrams(300, gr, 1, order), "macros reach the calories");
+        eq("[55.0, 20.0, 0.0]", Arrays.toString(gr), "least recent macro (carbs) takes the rest");
+        eq("[0, 2, 1]", Arrays.toString(order), "typed macro moves to most recent");
+        gr = new double[]{55, 20, 20}; // fat raised to 20 g
+        order = new int[]{0, 2, 1};
+        FastingLogic.balanceGrams(300, gr, 2, order);
+        eq("[10.0, 20.0, 20.0]", Arrays.toString(gr), "carbs give for the fat");
+        gr = new double[]{55, 20, 40}; // fat raised to 40 g = 360 kcal, more than the 300 typed
+        order = new int[]{0, 1, 2};
+        eq(360.0, FastingLogic.balanceGrams(300, gr, 2, order), "fat alone exceeds the calories");
+        eq("[0.0, 0.0, 40.0]", Arrays.toString(gr), "carbs then protein give, typed fat stays");
+        gr = new double[]{0, 20, 20};
+        order = new int[]{1, 0, 2};
+        FastingLogic.balanceGrams(300, gr, 2, order);
+        eq("[0.0, 30.0, 20.0]", Arrays.toString(gr), "spills to protein when it is least recent");
+        gr = new double[]{55, 20, 0}; // calories lowered to 200 with protein most recent
+        order = new int[]{2, 0, 1};
+        eq(200.0, FastingLogic.balanceGrams(200, gr, -1, order), "calorie change rebalances");
+        eq("[30.0, 20.0, 0.0]", Arrays.toString(gr), "fat at 0 can't give, carbs do");
+        eq("[2, 0, 1]", Arrays.toString(order), "calorie change keeps the order");
+        eq(236.0, FastingLogic.macroKcal(new double[]{30, 20, 4}), "macro kcal");
         // durations
         eq("16h 05m", FastingLogic.dur(16 * 3600000L + 5 * 60000L), "dur");
         eq("45m", FastingLogic.dur(45 * 60000L), "dur minutes");

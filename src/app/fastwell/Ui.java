@@ -325,9 +325,11 @@ final class Ui {
         return h;
     }
 
-    static double num(EditText e, double def) {
+    static double num(EditText e, double def) { return num(e.getText().toString(), def); }
+
+    static double num(String text, double def) {
         try {
-            String s = e.getText().toString().trim().replace(',', '.');
+            String s = text.trim().replace(',', '.');
             return s.isEmpty() ? def : Double.parseDouble(s);
         } catch (NumberFormatException ex) {
             return def;

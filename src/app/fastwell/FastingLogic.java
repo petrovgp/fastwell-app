@@ -136,6 +136,38 @@ final class FastingLogic {
         }
     }
 
+    /** Calories per gram of {carbs, protein, fat}. */
+    static final double[] KCAL_PER_G = {4, 4, 9};
+
+    /** Calories of {carbs, protein, fat} grams. */
+    static double macroKcal(double[] g) {
+        return g[CARBS] * KCAL_PER_G[CARBS] + g[PROTEIN] * KCAL_PER_G[PROTEIN] + g[FAT] * KCAL_PER_G[FAT];
+    }
+
+    /**
+     * Like {@link #rebalance} for a food's {carbs, protein, fat} grams: after g[changed] was typed, takes the
+     * calorie difference from the other macros so they add up to kcal again, least recently changed first.
+     * With changed = -1 (the calories were typed) every macro can absorb it. Returns the calories the macros
+     * add up to afterwards, which is more than kcal when the changed macro alone exceeds it.
+     */
+    static double balanceGrams(double kcal, double[] g, int changed, int[] order) {
+        int adjustable = order.length;
+        if (changed >= 0) {
+            int k = 0;
+            for (int col : order) if (col != changed) order[k++] = col;
+            order[k] = changed;
+            adjustable--;
+        }
+        double diff = macroKcal(g) - kcal;
+        for (int i = 0; i < adjustable && Math.abs(diff) > 1e-9; i++) {
+            int col = order[i];
+            double v = Math.max(0, g[col] - diff / KCAL_PER_G[col]);
+            diff -= (g[col] - v) * KCAL_PER_G[col];
+            g[col] = v;
+        }
+        return kcal + diff;
+    }
+
     /**
      * Streaks of consecutive days that contain at least one completed fast that met its goal,
      * attributed to the local day it ended. The current streak stays alive through today
