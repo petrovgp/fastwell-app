@@ -44,7 +44,7 @@ final class FastingLogic {
     static Plan plan(String id, int customHours) {
         if (CUSTOM.equals(id)) {
             int h = Math.max(1, Math.min(72, customHours));
-            return new Plan(CUSTOM, "Custom  " + h + "h", h);
+            return new Plan(CUSTOM, "Custom  " + h + ":" + Math.max(0, 24 - h), h);
         }
         for (Plan p : PRESETS) if (p.id.equals(id)) return p;
         return PRESETS[1];
