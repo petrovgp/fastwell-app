@@ -91,6 +91,7 @@ final class LogWorkoutScreen extends Screen {
         String title = (isNew ? "Log " : "Edit ") + (cardio ? "cardio" : "strength");
         LinearLayout header = FastHistoryScreen.backHeader(a, title);
         header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
+        if (isNew) header.addView(Ui.chip(c, Ui.dayLabel(a.selectedDay), R.color.train));
         root.addView(header);
 
         LinearLayout col = Ui.column(c, 24);
