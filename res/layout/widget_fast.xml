@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- FastingLogic.widgetRingDp sizes the ring from this padding and the height of the stage text. -->
+<!-- Stacked layout, up to about 3x2. FastingLogic.widgetRingDp sizes the ring from this padding. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:maxLines="1"
                 android:textColor="@color/text2"
-                android:textSize="13dp" />
+                android:textSize="8dp" />
 
             <Chronometer
                 android:id="@+id/widget_clock"
@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:maxLines="1"
                 android:textColor="@color/text"
-                android:textSize="29dp"
+                android:textSize="16dp"
                 android:textStyle="bold" />
 
             <TextView
@@ -53,23 +53,24 @@
                 android:layout_height="wrap_content"
                 android:maxLines="1"
                 android:textColor="@color/text2"
-                android:textSize="13dp" />
+                android:textSize="8dp" />
         </LinearLayout>
     </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
         <TextView
+            android:id="@+id/widget_stage_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Current stage"
             android:textColor="@color/text2"
-            android:textSize="14sp" />
+            android:textSize="8dp" />
 
         <TextView
             android:id="@+id/widget_stage"
@@ -78,7 +79,7 @@
             android:gravity="center"
             android:maxLines="1"
             android:textColor="@color/text"
-            android:textSize="18sp"
+            android:textSize="10dp"
             android:textStyle="bold" />
 
         <TextView
@@ -89,6 +90,6 @@
             android:gravity="center"
             android:maxLines="2"
             android:textColor="@color/text2"
-            android:textSize="14sp" />
+            android:textSize="8dp" />
     </LinearLayout>
 </LinearLayout>

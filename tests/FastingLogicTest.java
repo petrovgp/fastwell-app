@@ -253,12 +253,23 @@ public class FastingLogicTest {
         eq(fastStart + 2 * min, FastingLogic.nextMinute(fastStart + min + 20_000, fastStart), "partway through a minute");
         eq(fastStart + 2 * min, FastingLogic.nextMinute(fastStart + min, fastStart), "exactly on a minute moves to the next");
         eq(fastStart + min, FastingLogic.nextMinute(fastStart, fastStart), "just started");
-        // widget ring size, leaving 16dp of width and 99dp of height for padding and the stage text
-        eq(241, FastingLogic.widgetRingDp(330, 340), "a square tile is limited by its height");
-        eq(184, FastingLogic.widgetRingDp(200, 400), "a tall tile is limited by its width");
-        eq(151, FastingLogic.widgetRingDp(250, 250), "smallest 4x4 tile");
-        eq(120, FastingLogic.widgetRingDp(100, 100), "the ring stays readable on a tiny tile");
-        eq(170, FastingLogic.widgetRingDp(0, 0), "launcher reported no size");
+        // widget layout, side by side from about 4x2
+        eq(false, FastingLogic.widgetWide(170, 170), "2x2 tile stacks");
+        eq(false, FastingLogic.widgetWide(250, 170), "3x2 tile has no room beside the ring");
+        eq(true, FastingLogic.widgetWide(300, 170), "side by side once 1.75 times as wide as tall");
+        eq(true, FastingLogic.widgetWide(340, 170), "4x2 tile");
+        eq(false, FastingLogic.widgetWide(0, 0), "launcher reported no size");
+        // widget ring size
+        eq(109, FastingLogic.widgetRingDp(170, 170), "2x2 ring leaves room for the stage text below");
+        eq(104, FastingLogic.widgetRingDp(120, 300), "a tall tile is limited by its width");
+        eq(90, FastingLogic.widgetRingDp(100, 100), "the ring stays readable on a tiny tile");
+        eq(162, FastingLogic.widgetRingDp(340, 170), "wide ring nearly reaches the top and bottom");
+        eq(108, FastingLogic.widgetRingDp(0, 0), "launcher reported no size");
+        // widget text, sized from the space inside the ring: 81dp in a 109dp ring, 127dp in a 162dp one
+        eq(16, FastingLogic.widgetClockDp(109), "2x2 clock clears the ring");
+        eq(25, FastingLogic.widgetClockDp(162), "4x2 clock clears the ring");
+        eq(8, FastingLogic.widgetLineDp(109), "2x2 lines around the clock");
+        eq(13, FastingLogic.widgetLineDp(162), "4x2 lines around the clock");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

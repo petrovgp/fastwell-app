@@ -252,14 +252,27 @@ final class FastingLogic {
         return now + 60_000L - (now - startAt) % 60_000L;
     }
 
-    /** Space in widget_fast.xml around the ring: its side padding, and its top and bottom padding plus the stage text. */
-    private static final int WIDGET_SPARE_WIDTH_DP = 16, WIDGET_SPARE_HEIGHT_DP = 99;
+    /** Whether a widget tile has room for the stage text beside the ring (widget_fast_wide.xml), not below it. */
+    static boolean widgetWide(int widthDp, int heightDp) { return heightDp > 0 && widthDp * 4 >= heightDp * 7; }
 
     /** Ring size that fills a widget tile of the given size; launchers may report 0 for a size they don't know. */
     static int widgetRingDp(int widthDp, int heightDp) {
-        if (widthDp <= 0 || heightDp <= 0) return 170;
-        return Math.max(120, Math.min(widthDp - WIDGET_SPARE_WIDTH_DP, heightDp - WIDGET_SPARE_HEIGHT_DP));
+        if (widthDp <= 0 || heightDp <= 0) return 108;
+        // Padding in the widget layouts: 4dp above and below the wide ring, 8dp beside the stacked one.
+        if (widgetWide(widthDp, heightDp)) return Math.max(90, heightDp - 8);
+        return Math.max(90, Math.min(widthDp - 16, Math.round(heightDp * 0.64f)));
     }
+
+    /** The widget ring's stroke, as a share of its size. */
+    static final float WIDGET_STROKE = 0.065f;
+
+    /** Space inside the widget ring: its size less the stroke and 7dp of fixed margin on each side. */
+    private static float widgetInnerDp(int ringDp) { return ringDp - 14 - 2 * ringDp * WIDGET_STROKE; }
+
+    static int widgetClockDp(int ringDp) { return Math.round(widgetInnerDp(ringDp) * 0.2f); }
+
+    /** The lines above and below the widget's clock. */
+    static int widgetLineDp(int ringDp) { return Math.round(widgetInnerDp(ringDp) * 0.1f); }
 
     /** Meal slot from local hour: 0 breakfast, 1 lunch, 2 dinner, 3 snacks. */
     static int mealForHour(int hour) {
