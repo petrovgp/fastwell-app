@@ -37,10 +37,17 @@ echo "1/5 resources"
 aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -I "$ANDROID_JAR_RES"
 
 echo "2/5 compile"
+# javac's exit status is the only reliable check: it can write classes before
+# it reaches an error in a later file, so finding class files proves nothing.
+javac_ok=1
 javac -nowarn -Xlint:none -source 8 -target 8 -encoding UTF-8 \
   -bootclasspath "$ANDROID_JAR_36" -d build/classes \
-  build/gen/app/fastwell/R.java src/app/fastwell/*.java 2>&1 | grep -v -E "^warning: \[options\]|^Picked up|^[0-9]+ warnings?$|^Note: " || true
-test -f build/classes/app/fastwell/MainActivity.class
+  build/gen/app/fastwell/R.java src/app/fastwell/*.java >build/javac.log 2>&1 || javac_ok=0
+grep -v -E "^warning: \[options\]|^Picked up|^[0-9]+ warnings?$|^Note: " build/javac.log || true
+if [ "$javac_ok" != 1 ]; then
+  echo "Compile failed"
+  exit 1
+fi
 
 echo "3/5 dex"
 java -jar "$DX_JAR" --dex --min-sdk-version=26 --output=build/classes.dex build/classes
