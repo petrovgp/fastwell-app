@@ -559,15 +559,6 @@ final class Db extends SQLiteOpenHelper {
         return new double[4];
     }
 
-    Map<String, Double> volumeByDay(String fromDay, String toDay) {
-        Map<String, Double> out = new LinkedHashMap<String, Double>();
-        Cursor c = getReadableDatabase().rawQuery("SELECT w.day, TOTAL(s.reps * s.weight) FROM workout w "
-                + "JOIN workout_set s ON s.workout_id = w.id WHERE s.done = 1 AND w.day BETWEEN ? AND ? GROUP BY w.day",
-                new String[] {fromDay, toDay});
-        try { while (c.moveToNext()) out.put(c.getString(0), c.getDouble(1)); } finally { c.close(); }
-        return out;
-    }
-
     // ---------- body weight ----------
 
     /** Logs a day's weight to one decimal, replacing that day's earlier log. */

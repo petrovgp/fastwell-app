@@ -93,24 +93,22 @@ final class ProgressScreen extends Screen {
         col.addView(chartCard("Calories", avgText(kv, " kcal") + "  -  target " + Ui.n0(prefs.kcalTarget()), kv, labels,
                 prefs.kcalTarget(), R.color.eat, false, raised));
 
-        // Training volume per day + sessions.
-        Map<String, Double> vol = db.volumeByDay(from, to);
-        double[] vv = new double[days.size()];
-        for (int i = 0; i < days.size(); i++) {
-            Double v = vol.get(days.get(i).toString());
-            vv[i] = v == null ? 0 : v;
-        }
+        // Sessions per day, against the target for the training days in range.
+        double[] sv = new double[days.size()];
         int mins = 0, fasted = 0;
         for (Db.Workout w : ws) {
+            for (int i = 0; i < days.size(); i++) if (w.day.equals(days.get(i).toString())) sv[i]++;
             mins += WorkoutsScreen.minutes(w);
             if (w.fasted) fasted++;
         }
-        String wsub = ws.size() + (ws.size() == 1 ? " session" : " sessions") + ", " + mins + " min"
-                + (ws.isEmpty() ? "" : ", " + fasted + " fasted");
-        col.addView(chartCard("Training volume (kg)", wsub, vv, labels, 0, R.color.train, false, null));
+        int daily = prefs.workoutTarget();
+        int goal = FastingLogic.sessionTarget(daily, prefs.restDays(), days);
+        String wsub = (goal > 0 ? ws.size() + " of " + goal + FastingLogic.sessions(goal) : ws.size() + FastingLogic.sessions(ws.size()))
+                + "  -  " + mins + " min" + (ws.isEmpty() ? "" : ", " + fasted + " fasted");
+        col.addView(chartCard("Training sessions", wsub, sv, labels, daily, R.color.train, true, null));
 
         int logged = 0;
-        for (int i = 0; i < days.size(); i++) if (fh[i] > 0 || wv[i] > 0 || kv[i] > 0 || vv[i] > 0) logged++;
+        for (int i = 0; i < days.size(); i++) if (fh[i] > 0 || wv[i] > 0 || kv[i] > 0 || sv[i] > 0) logged++;
         if (logged < 3) {
             TextView hint = Ui.muted(c, "Log at least 3 days to see trends.");
             hint.setPadding(Ui.dp(c, 4), 0, 0, 0);

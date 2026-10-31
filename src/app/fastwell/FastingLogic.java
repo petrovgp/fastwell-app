@@ -340,6 +340,13 @@ final class FastingLogic {
 
     static boolean isRestDay(int restDays, LocalDate day) { return (restDays & restBit(day.getDayOfWeek())) != 0; }
 
+    /** Sessions the daily target adds up to over some days, leaving out the rest days. */
+    static int sessionTarget(int daily, int restDays, List<LocalDate> days) {
+        int n = 0;
+        for (LocalDate d : days) if (!isRestDay(restDays, d)) n += daily;
+        return n;
+    }
+
     /** Short names of the rest days like "Sat, Sun", in week order from first. */
     static String restDayNames(int restDays, DayOfWeek first, Locale locale) {
         StringBuilder sb = new StringBuilder();

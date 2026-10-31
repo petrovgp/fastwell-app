@@ -270,6 +270,17 @@ public class FastingLogicTest {
         eq(25, FastingLogic.widgetClockDp(162), "4x2 clock clears the ring");
         eq(8, FastingLogic.widgetLineDp(109), "2x2 lines around the clock");
         eq(13, FastingLogic.widgetLineDp(162), "4x2 lines around the clock");
+        // session target over a range: the daily target on every day that isn't a rest day
+        List<LocalDate> sevenDays = FastingLogic.lastDays(LocalDate.of(2026, 10, 25), 7);
+        int satSun = FastingLogic.restBit(DayOfWeek.SATURDAY) | FastingLogic.restBit(DayOfWeek.SUNDAY);
+        eq(7, FastingLogic.sessionTarget(1, 0, sevenDays), "no rest days");
+        eq(5, FastingLogic.sessionTarget(1, satSun, sevenDays), "two rest days off the week");
+        eq(10, FastingLogic.sessionTarget(2, satSun, sevenDays), "daily target times training days");
+        eq(0, FastingLogic.sessionTarget(1, 127, sevenDays), "all seven days rest");
+        eq(20, FastingLogic.sessionTarget(1, satSun, FastingLogic.lastDays(LocalDate.of(2026, 10, 25), 30)),
+                "month counts its own weekdays");
+        eq(22, FastingLogic.sessionTarget(1, satSun, FastingLogic.lastDays(LocalDate.of(2026, 10, 30), 30)),
+                "a different 30 days can hold more training days");
         // weight: two dials, one decimal
         Locale.setDefault(Locale.US);
         eq(74.3, FastingLogic.tenth(74.34), "weight rounds down to a tenth");
