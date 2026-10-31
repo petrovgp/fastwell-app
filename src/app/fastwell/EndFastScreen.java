@@ -16,6 +16,9 @@ import java.util.List;
 final class EndFastScreen extends Screen {
     /** Top to bottom as shown; the stored mood is 5 for Great down to 1 for Rough (0 = not picked). */
     static final String[] MOODS = {"Great", "Good", "Neutral", "Bad", "Rough"};
+    /** The face shown on each mood's card, in MOODS order. */
+    private static final int[] MOOD_ICONS = {R.drawable.ic_mood_great, R.drawable.ic_mood_good, R.drawable.ic_mood_neutral,
+            R.drawable.ic_mood_bad, R.drawable.ic_mood_rough};
     /** Fasts shorter than this ask whether to save or discard them. */
     static final long SHORT_MS = 60 * 60000L;
 
@@ -50,7 +53,7 @@ final class EndFastScreen extends Screen {
         final List<Choice> group = new ArrayList<Choice>();
         for (int i = 0; i < MOODS.length; i++) {
             final int value = MOODS.length - i;
-            final Choice ch = Choice.card(c, (String) null, MOODS[i], null);
+            final Choice ch = Choice.card(c, moodIcon(i), MOODS[i], null);
             ch.onClick(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -75,6 +78,12 @@ final class EndFastScreen extends Screen {
         root.addView(bottom, Ui.lp(Ui.MATCH, Ui.WRAP));
         update();
         return root;
+    }
+
+    private View moodIcon(int i) {
+        LinearLayout wrap = Ui.hbox(c);
+        wrap.addView(Ui.icon(c, MOOD_ICONS[i], R.color.primary, 28));
+        return wrap;
     }
 
     private View summaryCard() {
