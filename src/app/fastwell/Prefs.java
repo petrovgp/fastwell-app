@@ -87,6 +87,8 @@ final class Prefs {
                 .putFloat("weight", weightKg).putInt("activity", activity).apply();
     }
 
+    void setWeightKg(float weightKg) { p.edit().putFloat("weight", weightKg).apply(); }
+
     boolean askedNotifPermission() { return p.getBoolean("asked_notif", false); }
     void setAskedNotifPermission() { p.edit().putBoolean("asked_notif", true).apply(); }
 

@@ -204,12 +204,7 @@ final class Views {
                     c.drawRect(cx - bw / 2, to, cx + bw / 2, from, raise);
                     c.drawRect(cx - bw / 2, to, cx + bw / 2, to + Ui.dp(getContext(), 2), raiseTop);
                 }
-                if (i % step == 0 || i == n - 1) {
-                    // Month slots are narrower than two digits, so keep the edge labels inside the view.
-                    float half = label.measureText(labels[i]) / 2;
-                    float x = Math.max(half, Math.min(cx, getWidth() - half));
-                    c.drawText(labels[i], x, getHeight() - Ui.dp(getContext(), 4), label);
-                }
+                if (i % step == 0 || i == n - 1) dayLabel(c, this, label, labels[i], cx);
             }
             if (targetValue > 0) {
                 float y = base - h * targetValue / max;
@@ -217,6 +212,87 @@ final class Views {
                 p.moveTo(0, y);
                 p.lineTo(getWidth(), y);
                 c.drawPath(p, target);
+            }
+        }
+    }
+
+    /** Month slots are narrower than two digits, so this keeps the edge labels inside the view. */
+    private static void dayLabel(Canvas c, View v, Paint label, String text, float cx) {
+        float half = label.measureText(text) / 2;
+        c.drawText(text, Math.max(half, Math.min(cx, v.getWidth() - half)), v.getHeight() - Ui.dp(v.getContext(), 4), label);
+    }
+
+    /**
+     * Line through the logged days with x labels like Chart's. A value of 0 is a day without a log, which the line
+     * passes over. The scale fits the logs instead of starting at 0, so a small change in weight still shows.
+     */
+    static final class LineChart extends View {
+        /** The least the scale covers, so a change of a tenth doesn't fill the chart. */
+        private static final float MIN_SPAN = 1f;
+
+        private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+        private float[] values = new float[0];
+        private String[] labels = new String[0];
+
+        LineChart(Context c, int color) {
+            super(c);
+            line.setColor(color);
+            line.setStyle(Paint.Style.STROKE);
+            line.setStrokeWidth(Ui.dp(c, 2));
+            line.setStrokeCap(Paint.Cap.ROUND);
+            line.setStrokeJoin(Paint.Join.ROUND);
+            dot.setColor(color);
+            label.setColor(Ui.col(c, R.color.text2));
+            label.setTextSize(Ui.dp(c, 11));
+            label.setTextAlign(Paint.Align.CENTER);
+            grid.setColor(Ui.col(c, R.color.outline));
+            grid.setStrokeWidth(Ui.dp(c, 1));
+        }
+
+        void setData(float[] v, String[] l) {
+            values = v;
+            labels = l;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            int n = values.length;
+            if (n == 0) return;
+            float labelH = Ui.dp(getContext(), 18);
+            float top = Ui.dp(getContext(), 8);
+            float h = getHeight() - labelH - top;
+            float base = top + h;
+            float min = Float.MAX_VALUE, max = 0;
+            for (float v : values) {
+                if (v <= 0) continue;
+                min = Math.min(min, v);
+                max = Math.max(max, v);
+            }
+            float span = Math.max(max - min, MIN_SPAN) * 1.2f;
+            float low = (min + max) / 2 - span / 2;
+            float slot = getWidth() / (float) n;
+            c.drawLine(0, base, getWidth(), base, grid);
+            path.rewind();
+            boolean first = true;
+            for (int i = 0; i < n; i++) {
+                if (values[i] <= 0) continue;
+                float x = slot * i + slot / 2, y = base - h * (values[i] - low) / span;
+                if (first) path.moveTo(x, y);
+                else path.lineTo(x, y);
+                first = false;
+            }
+            c.drawPath(path, line);
+            float radius = Ui.dp(getContext(), n > 14 ? 3 : 4);
+            int step = n > 14 ? (int) Math.ceil(n / 7.0) : 1;
+            for (int i = 0; i < n; i++) {
+                float cx = slot * i + slot / 2;
+                if (values[i] > 0) c.drawCircle(cx, base - h * (values[i] - low) / span, radius, dot);
+                if (i % step == 0 || i == n - 1) dayLabel(c, this, label, labels[i], cx);
             }
         }
     }

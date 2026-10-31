@@ -270,6 +270,24 @@ public class FastingLogicTest {
         eq(25, FastingLogic.widgetClockDp(162), "4x2 clock clears the ring");
         eq(8, FastingLogic.widgetLineDp(109), "2x2 lines around the clock");
         eq(13, FastingLogic.widgetLineDp(162), "4x2 lines around the clock");
+        // weight: two dials, one decimal
+        Locale.setDefault(Locale.US);
+        eq(74.3, FastingLogic.tenth(74.34), "weight rounds down to a tenth");
+        eq(74.4, FastingLogic.tenth(74.35), "weight rounds up to a tenth");
+        eq(74, FastingLogic.wholeKg(74.3f), "whole dial of a float weight");
+        eq(0.3, FastingLogic.decimalKg(74.3f), "decimal dial of a float weight");
+        eq(75, FastingLogic.wholeKg(74.96), "rounding up carries to the whole dial");
+        eq(0.0, FastingLogic.decimalKg(74.96), "rounding up clears the decimal dial");
+        eq(74.3, FastingLogic.joinKg(74, 0.30000000000000004), "dials join to one decimal");
+        eq("74.0 kg", FastingLogic.kgText(74), "whole weights keep their decimal");
+        eq("down 0.8 kg", FastingLogic.weightChange(75, 74.2), "weight lost");
+        eq("up 0.5 kg", FastingLogic.weightChange(74.2, 74.7), "weight gained");
+        eq("no change", FastingLogic.weightChange(74.3, 74.3), "weight kept");
+        eq("no change", FastingLogic.weightChange(74.3f, 74.3), "a float weight is no change from its double");
+        eq("No data yet", FastingLogic.weightSummary(new double[] {0, 0, 0}, "this week"), "no weight in range");
+        eq("74.2 kg", FastingLogic.weightSummary(new double[] {0, 74.2, 0}, "this week"), "one log has no change to show");
+        eq("74.2 kg  -  down 0.8 kg this month", FastingLogic.weightSummary(new double[] {0, 75, 0, 74.5, 74.2, 0}, "this month"),
+                "first to last log of the range");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

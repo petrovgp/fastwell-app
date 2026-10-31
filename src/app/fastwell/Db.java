@@ -89,9 +89,9 @@ final class Db extends SQLiteOpenHelper {
         return inst;
     }
 
-    private Db(Context c) { super(c, "fastwell.db", null, 2); }
+    private Db(Context c) { super(c, "fastwell.db", null, 3); }
 
-    static final String[] TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set"};
+    static final String[] TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set", "weight_log"};
 
     @Override
     public void onCreate(SQLiteDatabase d) {
@@ -112,6 +112,7 @@ final class Db extends SQLiteOpenHelper {
         d.execSQL("CREATE TABLE workout_set (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, "
                 + "exercise_id INTEGER NOT NULL, ord INTEGER NOT NULL, reps INTEGER DEFAULT 0, weight REAL DEFAULT 0, done INTEGER DEFAULT 0)");
         d.execSQL("CREATE INDEX idx_set_workout ON workout_set(workout_id)");
+        createWeightLog(d);
         seedExercises(d);
     }
 
@@ -122,6 +123,12 @@ final class Db extends SQLiteOpenHelper {
             d.execSQL("ALTER TABLE workout ADD COLUMN rpe INTEGER DEFAULT 0");
             fillDurations(d);
         }
+        if (oldV < 3) createWeightLog(d);
+    }
+
+    /** One weight per day; logging a day again replaces it. */
+    private static void createWeightLog(SQLiteDatabase d) {
+        d.execSQL("CREATE TABLE weight_log (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL UNIQUE, kg REAL NOT NULL)");
     }
 
     /** Gives v1 workouts, from an upgrade or an old backup, a duration; a live strength workout ends after an hour. */
@@ -560,6 +567,36 @@ final class Db extends SQLiteOpenHelper {
         try { while (c.moveToNext()) out.put(c.getString(0), c.getDouble(1)); } finally { c.close(); }
         return out;
     }
+
+    // ---------- body weight ----------
+
+    /** Logs a day's weight to one decimal, replacing that day's earlier log. */
+    void setWeight(String day, double kg) {
+        ContentValues v = new ContentValues();
+        v.put("day", day);
+        v.put("kg", FastingLogic.tenth(kg));
+        getWritableDatabase().insertWithOnConflict("weight_log", null, v, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    Map<String, Double> weightByDay(String fromDay, String toDay) {
+        Map<String, Double> out = new LinkedHashMap<String, Double>();
+        Cursor c = getReadableDatabase().rawQuery("SELECT day, kg FROM weight_log WHERE day BETWEEN ? AND ?",
+                new String[] {fromDay, toDay});
+        try { while (c.moveToNext()) out.put(c.getString(0), c.getDouble(1)); } finally { c.close(); }
+        return out;
+    }
+
+    private Double weightWhere(String where, String[] args) {
+        Cursor c = getReadableDatabase().query("weight_log", new String[] {"kg"}, where, args, null, null, "day DESC", "1");
+        try { return c.moveToFirst() ? Double.valueOf(c.getDouble(0)) : null; } finally { c.close(); }
+    }
+
+    Double weightOn(String day) { return weightWhere("day = ?", new String[] {day}); }
+
+    /** The last weight logged before a day, or null. */
+    Double weightBefore(String day) { return weightWhere("day < ?", new String[] {day}); }
+
+    Double latestWeight() { return weightWhere(null, null); }
 
     // ---------- backup ----------
 

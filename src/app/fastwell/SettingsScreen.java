@@ -179,13 +179,18 @@ final class SettingsScreen extends Screen {
         return r;
     }
 
-    /** Sex toggle, age/height/weight dial and activity cards, with a live Mifflin-St Jeor estimate. */
+    /** Sex toggle, age/height dial, weight dial and activity cards, with a live Mifflin-St Jeor estimate. */
     static final class ProfileForm {
+        /** Shorter than a dial's own height, so the two stacked dials leave room to scroll the page. */
+        private static final int DIAL_DP = 184;
+
         final LinearLayout view;
         final TextView estimate;
         private final Prefs prefs;
+        private final Db db;
         private final Dial dial;
-        private final int colAge, colHeight, colWeight;
+        private final WeightDial weightDial;
+        private final int colAge, colHeight;
         private final Choice male, female;
         private final List<Choice> sexes = new ArrayList<Choice>();
         private final List<Choice> levels = new ArrayList<Choice>();
@@ -194,6 +199,7 @@ final class SettingsScreen extends Screen {
 
         ProfileForm(MainActivity c, Prefs prefs) {
             this.prefs = prefs;
+            db = Db.get(c);
             isMale = prefs.male();
             activity = Math.max(0, Math.min(FastingLogic.ACTIVITY.length - 1, prefs.activity()));
             view = Ui.vbox(c);
@@ -218,16 +224,23 @@ final class SettingsScreen extends Screen {
                 public void onClick(View v) { isMale = false; Choice.select(sexes, female); update(); }
             });
 
-            view.addView(label(c, "Age, height and weight", "Drag each number up or down."));
+            view.addView(label(c, "Age and height", "Drag each number up or down."));
             dial = new Dial(c);
             colAge = dial.addColumn("AGE", "yrs", 14, 100, 1, 0, prefs.age());
             colHeight = dial.addColumn("HEIGHT", "cm", 120, 230, 1, 0, prefs.heightCm());
-            colWeight = dial.addColumn("WEIGHT", "kg", 35, 250, 1, 0, Math.round(prefs.weightKg()));
             dial.setListener(new Dial.Listener() {
                 @Override
                 public void onChange(int column, double value) { update(); }
             });
-            view.addView(dial, Ui.lp(Ui.MATCH, Ui.WRAP));
+            view.addView(dial, Ui.lp(Ui.MATCH, Ui.dp(c, DIAL_DP)));
+
+            view.addView(label(c, "Weight", null));
+            weightDial = new WeightDial(c, prefs.weightKg());
+            weightDial.onChange(new Runnable() {
+                @Override
+                public void run() { update(); }
+            });
+            view.addView(weightDial.view, Ui.lp(Ui.MATCH, Ui.dp(c, DIAL_DP)));
 
             view.addView(label(c, "Activity level", null));
             for (int i = 0; i < FastingLogic.ACTIVITY.length; i++) {
@@ -267,15 +280,19 @@ final class SettingsScreen extends Screen {
 
         int ageV() { return (int) Math.round(dial.value(colAge)); }
         int heightV() { return (int) Math.round(dial.value(colHeight)); }
-        float weightV() { return (float) dial.value(colWeight); }
+        float weightV() { return (float) weightDial.kg(); }
         int activityV() { return activity; }
 
         int kcal() { return FastingLogic.maintenanceKcal(isMale, ageV(), heightV(), weightV(), activityV()); }
 
         void update() { estimate.setText(Ui.n0(kcal()) + " kcal / day"); }
 
-        /** Saves the profile; targets are set on the daily target step. */
-        void saveProfile() { prefs.setProfile(isMale, ageV(), heightV(), weightV(), activityV()); }
+        /** Saves the profile, logging a changed or first weight for today; targets are set on the daily target step. */
+        void saveProfile() {
+            float kg = weightV();
+            if (kg != prefs.weightKg() || db.latestWeight() == null) db.setWeight(Db.today(), kg);
+            prefs.setProfile(isMale, ageV(), heightV(), kg, activityV());
+        }
 
     }
 }

@@ -1,5 +1,6 @@
 package app.fastwell;
 
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -104,6 +105,16 @@ final class FoodScreen extends Screen {
             body.addView(card);
         }
         root.addView(Ui.scroll(c, col), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        // Before the FAB, so the open speed dial covers it.
+        Button weight = Ui.fab(c, "Log weight", R.color.eat);
+        FrameLayout.LayoutParams weightLp = Ui.fabParams(c);
+        weightLp.gravity = Gravity.BOTTOM | Gravity.START;
+        weightLp.setMargins(Ui.dp(c, 16), 0, 0, Ui.dp(c, 16));
+        weight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { a.push(new LogWeightScreen(a)); }
+        });
+        root.addView(weight, weightLp);
         Button fab = Ui.fab(c, "Add food", R.color.eat);
         root.addView(fab);
         new SpeedDial(root, fab, R.color.eat, FastingLogic.MEALS, new SpeedDial.Pick() {

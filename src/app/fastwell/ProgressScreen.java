@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Weekly / monthly charts for fasting, calories and training, plus the streak. */
+/** Weekly / monthly charts for fasting, weight, calories and training, plus the streak. */
 final class ProgressScreen extends Screen {
     private static int rangeDays = 7;
 
@@ -69,6 +69,15 @@ final class ProgressScreen extends Screen {
         col.addView(chartCard("Fasting hours", avgText(fh, "h") + "  -  goal " + planH + "h", fh, labels, planH,
                 R.color.primary, true, null));
 
+        // Weight per logged day.
+        Map<String, Double> wt = db.weightByDay(from, to);
+        double[] wv = new double[days.size()];
+        for (int i = 0; i < days.size(); i++) {
+            Double v = wt.get(days.get(i).toString());
+            wv[i] = v == null ? 0 : v;
+        }
+        col.addView(weightCard(wv, labels));
+
         // Calories per day.
         Map<String, Double> kc = db.kcalByDay(from, to);
         double[] kv = new double[days.size()];
@@ -101,7 +110,7 @@ final class ProgressScreen extends Screen {
         col.addView(chartCard("Training volume (kg)", wsub, vv, labels, 0, R.color.train, false, null));
 
         int logged = 0;
-        for (int i = 0; i < days.size(); i++) if (fh[i] > 0 || kv[i] > 0 || vv[i] > 0) logged++;
+        for (int i = 0; i < days.size(); i++) if (fh[i] > 0 || wv[i] > 0 || kv[i] > 0 || vv[i] > 0) logged++;
         if (logged < 3) {
             TextView hint = Ui.muted(c, "Log at least 3 days to see trends.");
             hint.setPadding(Ui.dp(c, 4), 0, 0, 0);
@@ -128,6 +137,18 @@ final class ProgressScreen extends Screen {
         for (double d : v) if (d > 0) { sum += d; n++; }
         if (n == 0) return "No data yet";
         return "Avg " + (unit.equals("h") ? Ui.n1(sum / n) : Ui.n0(sum / n)) + unit + " on " + n + (n == 1 ? " day" : " days");
+    }
+
+    private View weightCard(double[] kg, String[] labels) {
+        LinearLayout card = Ui.card(c);
+        card.addView(Ui.text(c, "Weight", 16, R.color.text, true));
+        card.addView(Ui.muted(c, FastingLogic.weightSummary(kg, rangeDays == 7 ? "this week" : "this month")));
+        float[] f = new float[kg.length];
+        for (int i = 0; i < kg.length; i++) f[i] = (float) kg[i];
+        Views.LineChart chart = new Views.LineChart(c, Ui.col(c, R.color.water));
+        chart.setData(f, labels);
+        card.addView(chart, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 150), 0, 12, 0, 0));
+        return card;
     }
 
     /** raised, if not null, is how far workouts lifted each day's target; a legend explains it when any day has one. */

@@ -422,4 +422,35 @@ final class FastingLogic {
         for (int i = 0; i < reps.length; i++) v += reps[i] * weights[i];
         return v;
     }
+
+    // ---------- body weight ----------
+
+    static double tenth(double v) { return Math.round(v * 10) / 10.0; }
+
+    /** The whole kilos and the decimal of a weight, for its two dials; they add up to the weight to the tenth. */
+    static int wholeKg(double kg) { return (int) (Math.round(kg * 10) / 10); }
+    static double decimalKg(double kg) { return Math.round(kg * 10) % 10 / 10.0; }
+    static double joinKg(int whole, double decimal) { return tenth(whole + decimal); }
+
+    static String kgText(double kg) { return String.format(Locale.getDefault(), "%.1f kg", kg); }
+
+    /** "down 0.8 kg", "up 0.5 kg" or "no change", to the tenth. */
+    static String weightChange(double from, double to) {
+        double d = tenth(to - from);
+        if (d == 0) return "no change";
+        return (d < 0 ? "down " : "up ") + kgText(Math.abs(d));
+    }
+
+    /** The latest weight and the change from the first log in perDay, where 0 is a day without a log. */
+    static String weightSummary(double[] perDay, String span) {
+        double first = 0, last = 0;
+        int n = 0;
+        for (double kg : perDay) {
+            if (kg <= 0) continue;
+            if (n++ == 0) first = kg;
+            last = kg;
+        }
+        if (n == 0) return "No data yet";
+        return n == 1 ? kgText(last) : kgText(last) + "  -  " + weightChange(first, last) + " " + span;
+    }
 }

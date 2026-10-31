@@ -28,4 +28,4 @@ The signing key `keystore/fastwell.jks` is deliberately not in the repo. Put you
 - `Notifier`, `FastReceiver`, `BootReceiver` – live timer notification, goal alarm, "End fast" action, reboot restore
 - `FastWidget` – home-screen fasting timer, redrawn from `Notifier.refresh` and each minute of a fast
 - `Off` – Open Food Facts search and barcode lookup
-- Screens: `Onboarding`, `Today`, `Fast`, `FastHistory`, `Food`, `Workouts`, `LogWorkout`, `Progress`, `Settings`
+- Screens: `Onboarding`, `Today`, `Fast`, `FastHistory`, `Food`, `Workouts`, `LogWorkout`, `LogWeight`, `Progress`, `Settings`
