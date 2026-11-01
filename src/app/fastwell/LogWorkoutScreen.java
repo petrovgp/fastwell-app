@@ -86,7 +86,7 @@ final class LogWorkoutScreen extends Screen {
         if (!cardio && !isNew) {
             lifts = db.workoutLifts(w.id);
             loadedFingerprint = FastingLogic.routineFingerprint(lifts);
-            if (!"Strength workout".equals(w.name)) routineName = w.name;
+            if (!lifts.isEmpty() && !"Strength workout".equals(w.name)) routineName = w.name;
         }
     }
 
@@ -212,10 +212,10 @@ final class LogWorkoutScreen extends Screen {
             }
 
             @Override
-            public void create() { open(new ArrayList<FastingLogic.Lift>(), "New routine"); }
+            public void create() { open(new ArrayList<FastingLogic.Lift>(), "New routine", true); }
 
             @Override
-            public void edit() { open(lifts, "Edit routine"); }
+            public void edit() { open(lifts, "Edit routine", false); }
 
             @Override
             public void saveAs() {
@@ -240,14 +240,16 @@ final class LogWorkoutScreen extends Screen {
     }
 
     /** Opens the editor on start; what it returns replaces the draft. */
-    private void open(List<FastingLogic.Lift> start, String title) {
+    private void open(List<FastingLogic.Lift> start, String title, final boolean fresh) {
         a.push(new RoutineEditScreen(a, title, start, w.id, false, new RoutineEditScreen.Done() {
             @Override
             public void on(List<FastingLogic.Lift> result) {
                 lifts = copyOf(result);
-                if (lifts.isEmpty()) {
+                // A new routine has no name or source; cancelling the editor never gets here.
+                if (fresh || lifts.isEmpty()) {
                     routineName = "";
                     sourceId = 0;
+                    sourceFingerprint = "";
                 }
                 a.pop();
                 showRoutine();
@@ -418,7 +420,12 @@ final class LogWorkoutScreen extends Screen {
             w.startAt = Math.max(dayStart, w.startAt - w.durationSec * 1000L);
         }
         w.endAt = w.startAt + w.durationSec * 1000L;
-        if (!cardio) w.name = lifts.isEmpty() || routineName.isEmpty() ? "Strength workout" : routineName;
+        if (!cardio) {
+            // An older log opened with no routine keeps its typed name unless a named routine is chosen.
+            boolean keepsName = !isNew && loadedFingerprint.equals(FastingLogic.routineFingerprint(new ArrayList<FastingLogic.Lift>()));
+            if (!lifts.isEmpty() && !routineName.isEmpty()) w.name = routineName;
+            else if (!keepsName) w.name = "Strength workout";
+        }
         if (isNew) db.addWorkout(w); else db.updateWorkout(w);
         if (!cardio) {
             db.setWorkoutLifts(w.id, lifts);
