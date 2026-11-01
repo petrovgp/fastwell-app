@@ -48,7 +48,7 @@
   - `static String routineFingerprint(List<Lift> lifts)`
   - `static int routineSets(List<Lift> lifts)`
   - `static double routineVolume(List<Lift> lifts)`
-  - `static String kgText(double weight)`
+  - `static String liftKgText(double weight)`
   - `static String liftLine(Lift l)`
   - `static String routineSummary(List<Lift> lifts)`
   - `static String routineTitle(List<Lift> lifts)`
@@ -93,9 +93,9 @@ eq(usFingerprint, FastingLogic.routineFingerprint(Arrays.asList(lift("INCLINE PR
 Locale.setDefault(Locale.US);
 eq(8, FastingLogic.routineSets(push), "sets add up");
 eq(1920.0, FastingLogic.routineVolume(push), "bodyweight adds no volume");
-eq("Bodyweight", FastingLogic.kgText(0), "zero weight is bodyweight");
-eq("60 kg", FastingLogic.kgText(60), "whole kilos");
-eq("57.5 kg", FastingLogic.kgText(57.5), "half kilos");
+eq("Bodyweight", FastingLogic.liftKgText(0), "zero weight is bodyweight");
+eq("60 kg", FastingLogic.liftKgText(60), "whole kilos");
+eq("57.5 kg", FastingLogic.liftKgText(57.5), "half kilos");
 eq("4 × 8 · 60 kg", FastingLogic.liftLine(lift("Bench press", 4, 8, 60)), "lift line");
 eq("4 × 12 · Bodyweight", FastingLogic.liftLine(lift("Dips", 4, 12, 0)), "bodyweight lift line");
 eq("2 exercises  -  8 sets  -  1,920 kg", FastingLogic.routineSummary(push), "routine summary");
@@ -118,7 +118,7 @@ Expected: compile errors for `FastingLogic.Lift` and the new functions.
 
 - `nameKey`: trim, replace `\\s+` with one space, `toLowerCase(Locale.ROOT)`.
 - `routineFingerprint`: for each lift append `nameKey`, sets, reps and `Math.round(weight * 2)` as integers, separated by `\u001f` and ended by `\u001e`. Build with `StringBuilder.append(int/long)` so no locale applies.
-- `kgText`: `Bodyweight` when `weight <= 0`. Otherwise `%.0f kg` for whole values and `%.1f kg` otherwise, in the default locale.
+- `liftKgText`: `Bodyweight` when `weight <= 0`. Otherwise `%.0f kg` for whole values and `%.1f kg` otherwise, in the default locale.
 - `routineSummary`: singular `exercise` and `set` for 1. Leave out the kg part at zero volume. Format kg with `String.format(Locale.getDefault(), "%,.0f kg", v)`. Parts join with two spaces, a hyphen and two spaces.
 
 - [ ] **Step 4: Run the tests to verify they pass**
@@ -198,7 +198,7 @@ git commit -m "Store routines and each workout's copy"
 - Modify: `src/app/fastwell/Dial.java`, `src/app/fastwell/Screen.java`, `src/app/fastwell/MainActivity.java:435-442`
 
 **Interfaces:**
-- Consumes: `Lift`, the dial limits, `kgText`, `liftLine`, `routineFingerprint`, `Db.lastLift`, `Db.liftNames`.
+- Consumes: `Lift`, the dial limits, `liftKgText`, `liftLine`, `routineFingerprint`, `Db.lastLift`, `Db.liftNames`.
 - Produces:
   - `boolean Screen.onBack()`: default false. True means the screen handled back.
   - `RoutineEditScreen(MainActivity a, String title, List<FastingLogic.Lift> start, long excludeWorkoutId, boolean needsOne, Done done)`
