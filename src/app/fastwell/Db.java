@@ -611,7 +611,7 @@ final class Db extends SQLiteOpenHelper {
             ContentValues v = new ContentValues();
             v.put(fk, id);
             putLift(v, n, lifts.get(n));
-            d.insert(table, null, v);
+            d.insertOrThrow(table, null, v);
         }
     }
 
@@ -692,7 +692,7 @@ final class Db extends SQLiteOpenHelper {
                 ContentValues v = new ContentValues();
                 v.put("fingerprint", fp);
                 v.put("last_used", System.currentTimeMillis());
-                id = d.insert("routine", null, v);
+                id = d.insertOrThrow("routine", null, v);
             }
             ContentValues nm = new ContentValues();
             nm.put("name", name.trim());
@@ -767,7 +767,7 @@ final class Db extends SQLiteOpenHelper {
             v.put("name", r.name);
             v.put("fingerprint", fp);
             v.put("last_used", r.lastUsed);
-            d.insert("routine", null, v);
+            d.insertOrThrow("routine", null, v);
             writeLifts(d, "routine_exercise", "routine_id", r.id, r.lifts);
             if (r.named()) dropUnnamedLike(d, fp, r.id);
             d.setTransactionSuccessful();
@@ -787,7 +787,8 @@ final class Db extends SQLiteOpenHelper {
             v.put("last_used", System.currentTimeMillis());
             if (best != null) d.update("routine", v, "id = ?", new String[] {String.valueOf(best.id)});
             else {
-                long id = d.insert("routine", null, v);
+                v.put("fingerprint", fp);
+                long id = d.insertOrThrow("routine", null, v);
                 fill(d, id, lifts);
             }
             List<Routine> recent = readRoutines(d, "name = ''", null);
