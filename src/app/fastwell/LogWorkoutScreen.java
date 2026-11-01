@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * Full-screen form for logging a finished workout or editing one. Cardio has an activity, distance and note;
- * strength is only its duration for now. The back arrow cancels.
+ * strength can also carry a routine, the exercises done. The back arrow cancels.
  */
 final class LogWorkoutScreen extends Screen {
     private static final int MAX_HOURS = 23;
@@ -34,6 +34,14 @@ final class LogWorkoutScreen extends Screen {
     private LinearLayout nameBox, estimateCard, typedKcalBox;
     private TextView kcalVal;
     private Button save;
+
+    private List<FastingLogic.Lift> lifts = new ArrayList<FastingLogic.Lift>();
+    /** The title the routine gives the workout; blank until it has one. */
+    private String routineName = "";
+    /** The saved routine chosen in this form, 0 if none, and its fingerprint at that point. */
+    private long sourceId;
+    private String sourceFingerprint = "", loadedFingerprint = "";
+    private LinearLayout routineBox;
 
     /** Starts a new workout of the given type on the selected day. */
     LogWorkoutScreen(MainActivity a, int type) {
@@ -75,6 +83,11 @@ final class LogWorkoutScreen extends Screen {
         }
         if (w.distanceKm > 0) distanceText = Ui.plain(w.distanceKm);
         noteText = w.note;
+        if (!cardio && !isNew) {
+            lifts = db.workoutLifts(w.id);
+            loadedFingerprint = FastingLogic.routineFingerprint(lifts);
+            if (!"Strength workout".equals(w.name)) routineName = w.name;
+        }
     }
 
     /** The saved workout's id, or 0 before the first save. */
@@ -107,6 +120,12 @@ final class LogWorkoutScreen extends Screen {
         }
         col.addView(Ui.sectionTitle(c, "Duration"));
         col.addView(durationDial(), Ui.lp(Ui.MATCH, Ui.dp(c, DIAL_DP)));
+        if (!cardio) {
+            col.addView(Ui.sectionTitle(c, "Routine"));
+            routineBox = Ui.vbox(c);
+            col.addView(routineBox);
+            showRoutine();
+        }
         if (cardio) {
             col.addView(textField("Distance in km (optional)", "0", Ui.DEC, distanceText, new Text() {
                 @Override
@@ -156,6 +175,90 @@ final class LogWorkoutScreen extends Screen {
 
         update();
         return root;
+    }
+
+    private boolean routineEdited() {
+        return sourceId > 0 && !FastingLogic.routineFingerprint(lifts).equals(sourceFingerprint);
+    }
+
+    /** Redraws the routine card from the current draft. */
+    private void showRoutine() {
+        if (routineBox == null) return;
+        routineBox.removeAllViews();
+        String title = routineName.isEmpty() ? "Routine" : routineName + (routineEdited() ? ", edited" : "");
+        String updateName = routineEdited() && db.getRoutine(sourceId) != null ? routineName : null;
+        routineBox.addView(RoutineCard.create(c, title, lifts, updateName, new RoutineCard.Actions() {
+            @Override
+            public void choose() {
+                a.push(new RoutinePickerScreen(a, new RoutinePickerScreen.Pick() {
+                    @Override
+                    public void on(Db.Routine r) {
+                        lifts = copyOf(r.lifts);
+                        if (r.named()) {
+                            routineName = r.name;
+                            sourceId = r.id;
+                            sourceFingerprint = FastingLogic.routineFingerprint(lifts);
+                        } else {
+                            routineName = "";
+                            sourceId = 0;
+                            sourceFingerprint = "";
+                        }
+                        showRoutine();
+                    }
+
+                    @Override
+                    public void newRoutine() { create(); }
+                }));
+            }
+
+            @Override
+            public void create() { open(new ArrayList<FastingLogic.Lift>(), "New routine"); }
+
+            @Override
+            public void edit() { open(lifts, "Edit routine"); }
+
+            @Override
+            public void saveAs() {
+                RoutineDialogs.saveAs(a, lifts, new RoutineDialogs.Saved() {
+                    @Override
+                    public void on(long id, String name) {
+                        routineName = name;
+                        sourceId = id;
+                        sourceFingerprint = FastingLogic.routineFingerprint(lifts);
+                        showRoutine();
+                    }
+                });
+            }
+
+            @Override
+            public void update() {
+                db.updateRoutine(sourceId, lifts);
+                sourceFingerprint = FastingLogic.routineFingerprint(lifts);
+                showRoutine();
+            }
+        }));
+    }
+
+    /** Opens the editor on start; what it returns replaces the draft. */
+    private void open(List<FastingLogic.Lift> start, String title) {
+        a.push(new RoutineEditScreen(a, title, start, w.id, false, new RoutineEditScreen.Done() {
+            @Override
+            public void on(List<FastingLogic.Lift> result) {
+                lifts = copyOf(result);
+                if (lifts.isEmpty()) {
+                    routineName = "";
+                    sourceId = 0;
+                }
+                a.pop();
+                showRoutine();
+            }
+        }));
+    }
+
+    private static List<FastingLogic.Lift> copyOf(List<FastingLogic.Lift> from) {
+        List<FastingLogic.Lift> out = new ArrayList<FastingLogic.Lift>();
+        for (FastingLogic.Lift l : from) out.add(l.copy());
+        return out;
     }
 
     private interface Text { void set(String s); }
@@ -315,7 +418,14 @@ final class LogWorkoutScreen extends Screen {
             w.startAt = Math.max(dayStart, w.startAt - w.durationSec * 1000L);
         }
         w.endAt = w.startAt + w.durationSec * 1000L;
+        if (!cardio) w.name = lifts.isEmpty() || routineName.isEmpty() ? "Strength workout" : routineName;
         if (isNew) db.addWorkout(w); else db.updateWorkout(w);
+        if (!cardio) {
+            db.setWorkoutLifts(w.id, lifts);
+            if (!lifts.isEmpty() && (isNew || !FastingLogic.routineFingerprint(lifts).equals(loadedFingerprint))) {
+                db.rememberRoutine(lifts);
+            }
+        }
         hideKeyboard();
         a.pop();
         a.snack(w.name + " saved  -  " + FastingLogic.workoutDur(w.durationSec), null);
@@ -323,6 +433,7 @@ final class LogWorkoutScreen extends Screen {
 
     private void delete() {
         final List<Db.WSet> sets = db.sets(w.id);
+        final List<FastingLogic.Lift> copy = db.workoutLifts(w.id);
         db.deleteWorkout(w.id);
         hideKeyboard();
         a.pop();
@@ -334,6 +445,7 @@ final class LogWorkoutScreen extends Screen {
                     s.workoutId = w.id;
                     db.addSet(s);
                 }
+                db.setWorkoutLifts(w.id, copy);
             }
         });
     }

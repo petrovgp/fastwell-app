@@ -117,8 +117,10 @@ final class WorkoutsScreen extends Screen {
         mid.addView(Ui.text(a, name, 16, R.color.text, true));
         String detail = FastingLogic.workoutDur(w.durationSec) + (w.distanceKm > 0 ? ", " + Ui.n1(w.distanceKm) + " km" : "")
                 + (w.kcal > 0 ? ", " + Ui.n0(w.kcal) + " kcal" : "");
-        // Only workouts from before sets stopped being logged have a volume.
+        // Strength shows its set count from the routine; only workouts from before sets stopped being logged have a volume.
         if (w.type == Db.STRENGTH) {
+            int sets = FastingLogic.routineSets(a.db.workoutLifts(w.id));
+            if (sets > 0) detail += ", " + sets + (sets == 1 ? " set" : " sets");
             double volume = a.db.workoutStats(w.id)[2];
             if (volume > 0) detail += ", " + Ui.n0(volume) + " kg";
         }
