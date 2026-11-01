@@ -1,6 +1,6 @@
 # Fastwell
 
-![Version 1.0.1](https://img.shields.io/badge/version-1.0.1-blue)
+![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)
 ![Android 16 (API 36)](https://img.shields.io/badge/Android-16%20(API%2036)-brightgreen)
 ![Requires Android 8.0+](https://img.shields.io/badge/requires-Android%208.0%2B-lightgrey)
 
@@ -74,7 +74,7 @@ Food search is the only feature that sends anything off your phone: your search 
 Fastwell gives general information, not medical advice.
 
 ## Install
-Copy `Fastwell-1.0.1.apk` to the phone, open it, and allow "Install unknown apps" for the app you opened it from.
+Copy `Fastwell-1.1.0.apk` to the phone, open it, and allow "Install unknown apps" for the app you opened it from.
 
 ## Build
 Works on Debian 12/13, Ubuntu 22.04+ and WSL. Install a JDK and three Android tools:
@@ -83,7 +83,7 @@ Works on Debian 12/13, Ubuntu 22.04+ and WSL. Install a JDK and three Android to
 
 Then:
 
-    ./build.sh          # -> out/Fastwell-1.0.1.apk
+    ./build.sh          # -> out/Fastwell-1.1.0.apk
     tests/run.sh        # JVM tests for the fasting/calorie/streak logic
 
 `dx` and the API 23 framework resources are bundled in `tools/` (see `tools/README.md`), so no distro Android SDK packages are needed. On the first run `build.sh` downloads the API 36 `android.jar` (~53 MB, from https://github.com/Reginer/aosp-android-jar) to `sdk/android-36.jar`.
