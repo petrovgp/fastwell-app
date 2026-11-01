@@ -16,7 +16,6 @@ Success means:
 - Exercise progress charts and personal record badges.
 - A live workout mode with set tick-offs and a rest timer.
 - Different reps or weight per set. One exercise is one row of sets × reps at one weight.
-- Managing routines outside a strength log. The picker is only reached from Log strength.
 - Routines on cardio workouts.
 - Rewriting legacy `workout_set` rows.
 - Keeping an unsaved new log if Android kills the app. New logs are already lost in that case.
@@ -61,6 +60,17 @@ Each row has a ⋮ menu:
 - **Name it** on a recent routine, or **Rename** on a saved one.
 - **Edit**, which opens the editor on the stored routine.
 - **Delete**, with an Undo snackbar. A log already using its copy keeps it.
+
+### Routines screen
+
+A **Routines** button sits at the top right of the Workouts screen header, on every day shown. It opens the Routines screen, which manages routines without starting a log.
+
+This is the picker in a second mode, with the same Saved and Recent lists, empty message, ⋮ menu and pinned **New routine** button. Two things differ:
+
+- The title is `Routines`.
+- Tapping a row opens the editor on the stored routine, the same as ⋮ **Edit**.
+
+**New routine** here opens the editor on an empty list. On **Done** it asks for a name, then adds the routine to Saved. Cancelling that dialog stays in the editor. Name clashes offer to replace, the same as **Save as**.
 
 ### Routine editor
 
@@ -169,9 +179,9 @@ The fingerprint covers each exercise in order: its name, trimmed and lowercased 
 | `Db` | `Routine` model, new tables and queries: routines by kind, get, save, rename, delete, restore, auto-save, trim Recent, read and replace a workout's copy, last-time lookup, name suggestions. `deleteWorkout` also removes the copy. `workoutStats` adds volume from `workout_exercise` to its total. |
 | `RoutineCard` (new) | Builds the card for a draft and reports button taps. `LogWorkoutScreen` is already 340 lines, so this stays separate. |
 | `RoutineEditScreen` (new) | The editor. Takes a list of lifts and a done callback, and doesn't know where they came from. |
-| `RoutinePickerScreen` (new) | The Saved and Recent lists and row menus. |
+| `RoutinePickerScreen` (new) | The Saved and Recent lists and row menus. Runs in pick mode from a log, or manage mode as the Routines screen. |
 | `LogWorkoutScreen` | Holds the draft and its source, shows the card, writes the copy and auto-saves. Undoing a delete restores the copy. |
-| `WorkoutsScreen` | Adds the set count to the summary row. |
+| `WorkoutsScreen` | Adds the **Routines** button to the header and the set count to the summary row. |
 | `Dial` | Shrinks a value's text when it is wider than its column. `Bodyweight` doesn't fit a three-column dial at the current size. |
 | `Screen`, `MainActivity` | `Screen.onBack()` returns false by default, and `handleBack()` asks it first, so the arrow and the system gesture share the discard check. |
 
@@ -198,6 +208,7 @@ The repo has no automated tests for `Db` or screens, so these are checked by han
 
 - Upgrade from a version 3 database with existing data.
 - Log, choose, edit, Save as, Update and Name it flows, including name clashes.
+- The Routines button: open, edit, rename, delete with Undo, and New routine including cancelling its name dialog.
 - Duplicate handling and Recent stopping at 20.
 - Reorder, duplicate, remove, Done with blank names, and discard on both the arrow and the system gesture.
 - Editing a saved routine leaves past logs unchanged.
