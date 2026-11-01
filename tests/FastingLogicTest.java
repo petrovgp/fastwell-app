@@ -16,6 +16,12 @@ public class FastingLogicTest {
     /** A finished fast of 16 hours, as {start, end, met}. */
     static long[] done(long end, int met) { return new long[]{end - 16 * 3_600_000L, end, met}; }
 
+    static FastingLogic.Lift lift(String name, int sets, int reps, double weight) {
+        FastingLogic.Lift l = new FastingLogic.Lift();
+        l.name = name; l.sets = sets; l.reps = reps; l.weight = weight;
+        return l;
+    }
+
     public static void main(String[] a) {
         ZoneId z = ZoneId.of("Europe/Skopje");
         // plans
@@ -373,6 +379,47 @@ public class FastingLogicTest {
         allTables.remove("food_entry");
         eq("It's missing its food_entry data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "missing table is refused");
         eq("It's missing its fast data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, new ArrayList<String>()), "empty tables are refused");
+        // routines
+        Locale locale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+        List<FastingLogic.Lift> push = Arrays.asList(lift("Bench press", 4, 8, 60), lift("Dips", 4, 12, 0));
+        eq("bench press", FastingLogic.nameKey("  Bench   PRESS "), "name key folds case and spaces");
+        eq(FastingLogic.nameKey("жим лежа"), FastingLogic.nameKey("ЖИМ  ЛЕЖА"), "name key folds Cyrillic");
+        eq(FastingLogic.routineFingerprint(push),
+                FastingLogic.routineFingerprint(Arrays.asList(lift(" bench  PRESS", 4, 8, 60), lift("dips", 4, 12, 0))),
+                "case and spacing don't change a fingerprint");
+        eq(false, FastingLogic.routineFingerprint(push).equals(FastingLogic.routineFingerprint(
+                Arrays.asList(lift("Dips", 4, 12, 0), lift("Bench press", 4, 8, 60)))), "order changes a fingerprint");
+        eq(false, FastingLogic.routineFingerprint(push).equals(FastingLogic.routineFingerprint(
+                Arrays.asList(lift("Bench press", 5, 8, 60), lift("Dips", 4, 12, 0)))), "sets change a fingerprint");
+        eq(false, FastingLogic.routineFingerprint(push).equals(FastingLogic.routineFingerprint(
+                Arrays.asList(lift("Bench press", 4, 9, 60), lift("Dips", 4, 12, 0)))), "reps change a fingerprint");
+        eq(false, FastingLogic.routineFingerprint(push).equals(FastingLogic.routineFingerprint(
+                Arrays.asList(lift("Bench press", 4, 8, 60.5), lift("Dips", 4, 12, 0)))), "weight changes a fingerprint");
+        eq(false, FastingLogic.routineFingerprint(Arrays.asList(lift("A|4|8|0;B", 1, 1, 0))).equals(
+                FastingLogic.routineFingerprint(Arrays.asList(lift("A", 4, 8, 0), lift("B", 1, 1, 0)))),
+                "separators in a name can't collide");
+        String usFingerprint = FastingLogic.routineFingerprint(Arrays.asList(lift("Incline press", 3, 10, 57.5)));
+        Locale.setDefault(new Locale("tr", "TR"));
+        eq(usFingerprint, FastingLogic.routineFingerprint(Arrays.asList(lift("INCLINE PRESS", 3, 10, 57.5))),
+                "a fingerprint doesn't depend on the device locale");
+        Locale.setDefault(Locale.US);
+        eq(8, FastingLogic.routineSets(push), "sets add up");
+        eq(1920.0, FastingLogic.routineVolume(push), "bodyweight adds no volume");
+        eq("Bodyweight", FastingLogic.liftKgText(0), "zero weight is bodyweight");
+        eq("60 kg", FastingLogic.liftKgText(60), "whole kilos");
+        eq("57.5 kg", FastingLogic.liftKgText(57.5), "half kilos");
+        eq("4 × 8 · 60 kg", FastingLogic.liftLine(lift("Bench press", 4, 8, 60)), "lift line");
+        eq("4 × 12 · Bodyweight", FastingLogic.liftLine(lift("Dips", 4, 12, 0)), "bodyweight lift line");
+        eq("2 exercises  -  8 sets  -  1,920 kg", FastingLogic.routineSummary(push), "routine summary");
+        eq("1 exercise  -  1 set", FastingLogic.routineSummary(Arrays.asList(lift("Plank", 1, 1, 0))), "summary with no volume");
+        eq("Bench press, Dips", FastingLogic.routineTitle(push), "two exercises are both named");
+        eq("A", FastingLogic.routineTitle(Arrays.asList(lift("A", 1, 1, 0))), "one exercise");
+        eq("A, B, +2", FastingLogic.routineTitle(Arrays.asList(lift("A", 1, 1, 0), lift("B", 1, 1, 0),
+                lift("C", 1, 1, 0), lift("D", 1, 1, 0))), "the rest are counted");
+        eq(null, FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, Arrays.asList(FastingLogic.BACKUP_TABLES)),
+                "a backup without routines restores");
+        Locale.setDefault(locale);
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

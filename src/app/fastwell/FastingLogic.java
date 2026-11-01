@@ -449,6 +449,75 @@ final class FastingLogic {
         return v;
     }
 
+    // ---------- routines ----------
+
+    static final int SETS_MIN = 1, SETS_MAX = 20, REPS_MIN = 1, REPS_MAX = 100, LIFT_SETS_DEFAULT = 3, LIFT_REPS_DEFAULT = 10, RECENT_ROUTINES = 20;
+    static final double LIFT_KG_MAX = 300, LIFT_KG_STEP = 0.5;
+
+    /** One exercise in a routine; a weight of 0 is bodyweight. */
+    static final class Lift {
+        String name = "";
+        int sets = LIFT_SETS_DEFAULT, reps = LIFT_REPS_DEFAULT;
+        double weight;
+
+        Lift copy() {
+            Lift l = new Lift();
+            l.name = name; l.sets = sets; l.reps = reps; l.weight = weight;
+            return l;
+        }
+    }
+
+    /** An exercise name with case and spacing folded, so "Bench  PRESS" matches "bench press". */
+    static String nameKey(String name) { return name.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT); }
+
+    /** Identifies a routine by its exercises in order; the same routine always gives the same text, whatever the locale. */
+    static String routineFingerprint(List<Lift> lifts) {
+        StringBuilder sb = new StringBuilder();
+        for (Lift l : lifts) {
+            sb.append(nameKey(l.name)).append('\u001f').append(l.sets).append('\u001f').append(l.reps).append('\u001f')
+                    .append(Math.round(l.weight * 2)).append('\u001e');
+        }
+        return sb.toString();
+    }
+
+    static int routineSets(List<Lift> lifts) {
+        int n = 0;
+        for (Lift l : lifts) n += l.sets;
+        return n;
+    }
+
+    /** Total kilos lifted: sets x reps x weight, so bodyweight lifts add nothing. */
+    static double routineVolume(List<Lift> lifts) {
+        double v = 0;
+        for (Lift l : lifts) v += l.sets * l.reps * l.weight;
+        return v;
+    }
+
+    static String liftKgText(double weight) {
+        if (weight <= 0) return "Bodyweight";
+        return String.format(Locale.getDefault(), weight == Math.rint(weight) ? "%.0f kg" : "%.1f kg", weight);
+    }
+
+    /** "4 × 8 · 60 kg". */
+    static String liftLine(Lift l) { return l.sets + " × " + l.reps + " · " + liftKgText(l.weight); }
+
+    /** "2 exercises  -  8 sets  -  1,920 kg", without the kilos at zero volume. */
+    static String routineSummary(List<Lift> lifts) {
+        int sets = routineSets(lifts);
+        String s = lifts.size() + (lifts.size() == 1 ? " exercise" : " exercises") + "  -  " + sets + (sets == 1 ? " set" : " sets");
+        double v = routineVolume(lifts);
+        if (v > 0) s += "  -  " + String.format(Locale.getDefault(), "%,.0f kg", v);
+        return s;
+    }
+
+    /** The first two exercise names, then how many more. */
+    static String routineTitle(List<Lift> lifts) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lifts.size() && i < 2; i++) sb.append(i > 0 ? ", " : "").append(lifts.get(i).name);
+        if (lifts.size() > 2) sb.append(", +").append(lifts.size() - 2);
+        return sb.toString();
+    }
+
     // ---------- backup ----------
 
     /** The format backups are written in. */
