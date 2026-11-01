@@ -379,6 +379,15 @@ public class FastingLogicTest {
         allTables.remove("food_entry");
         eq("It's missing its food_entry data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "missing table is refused");
         eq("It's missing its fast data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, new ArrayList<String>()), "empty tables are refused");
+        // exercise name completion
+        List<String> liftNames = Arrays.asList("Bench press", "Bench dip", "Deadlift", "Deadlift row", "Жим лежа");
+        eq("Bench press", FastingLogic.liftCompletion("ben", liftNames), "completes ignoring case, earliest name first");
+        eq("Bench dip", FastingLogic.liftCompletion("bench d", liftNames), "matches past the first word");
+        eq("Жим лежа", FastingLogic.liftCompletion("жим", liftNames), "completes Cyrillic ignoring case");
+        eq(null, FastingLogic.liftCompletion("press", liftNames), "only the start of a name matches");
+        eq(null, FastingLogic.liftCompletion("deadlift", liftNames), "a whole known name isn't extended");
+        eq(null, FastingLogic.liftCompletion("", liftNames), "nothing typed");
+        eq(null, FastingLogic.liftCompletion("  ", liftNames), "only spaces typed");
         // routines
         Locale locale = Locale.getDefault();
         Locale.setDefault(Locale.US);

@@ -511,6 +511,17 @@ final class FastingLogic {
     }
 
     /** The first two exercise names, then how many more. */
+    /** The first name that starts with what's typed, ignoring case, or null; a whole known name isn't extended. */
+    static String liftCompletion(String typed, List<String> names) {
+        if (typed.trim().isEmpty()) return null;
+        String match = null;
+        for (String n : names) {
+            if (n.equalsIgnoreCase(typed)) return null;
+            if (match == null && n.regionMatches(true, 0, typed, 0, typed.length())) match = n;
+        }
+        return match;
+    }
+
     static String routineTitle(List<Lift> lifts) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < lifts.size() && i < 2; i++) sb.append(i > 0 ? ", " : "").append(lifts.get(i).name);

@@ -4,12 +4,10 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.text.Editable;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -145,17 +143,9 @@ final class RoutineEditScreen extends Screen {
         final FastingLogic.Lift l = lifts.get(i);
         LinearLayout card = Ui.card(c);
 
-        final AutoCompleteTextView name = new AutoCompleteTextView(c);
-        name.setHint("Exercise name");
-        name.setInputType(Ui.TXT);
-        name.setSingleLine(true);
-        name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        name.setTextColor(Ui.col(c, R.color.text));
-        name.setHintTextColor(Ui.col(c, R.color.text2));
-        Ui.styleField(name);
-        name.setThreshold(1);
-        name.setAdapter(new ArrayAdapter<String>(c, android.R.layout.simple_dropdown_item_1line, names));
-        name.setText(l.name, false);
+        SuggestField field = new SuggestField(c, "Exercise name", names);
+        final EditText name = field.edit;
+        name.setText(l.name);
         name.addTextChangedListener(new Ui.SimpleWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
@@ -164,7 +154,7 @@ final class RoutineEditScreen extends Screen {
                 updateDone();
             }
         });
-        card.addView(name, Ui.lp(Ui.MATCH, Ui.WRAP));
+        card.addView(field.view, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         hintView = Ui.muted(c, "");
         hintView.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), 0, 0);

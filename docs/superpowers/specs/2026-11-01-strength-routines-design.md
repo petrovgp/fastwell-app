@@ -100,7 +100,9 @@ The back arrow and the system back gesture cancel. If anything changed, a dialog
 
 ### Exercise name suggestions
 
-Typing in the name field suggests matching names, ignoring case. Names you have used come first, most recent first, followed by the seeded names in the `exercise` table. Each name appears once. The field stays free text and a suggestion is never required.
+Typing in the name field shows the rest of the first matching name as faded text after what's typed, with no pop-up. A match starts with the typed text, ignoring case. Names you have used are tried first, most recent first, followed by the seeded names in the `exercise` table. A name that's already complete isn't extended, and a suggestion too long to fit the field isn't shown.
+
+Tapping the faded text or pressing the keyboard's Done key accepts it and uses the suggested spelling. Carrying on typing or leaving the field ignores it. The field stays free text and a suggestion is never required.
 
 ### Last time hint
 
