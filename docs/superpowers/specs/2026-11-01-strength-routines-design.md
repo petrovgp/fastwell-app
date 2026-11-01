@@ -42,6 +42,8 @@ Card title:
 
 Removing every exercise in the editor returns the card to empty.
 
+Back on Log strength asks before discarding when the routine changed.
+
 The calorie estimate still uses only duration, RPE and body weight.
 
 ### Routine picker
@@ -52,6 +54,8 @@ The calorie estimate still uses only duration, RPE and body weight.
 - **Recent:** auto-saved routines without a name, most recently used first, at most 20. They are titled by their first two exercises, like `Back squat, Leg press, +2`, and show `Used 28 Oct  -  14 sets`.
 - A **New routine** button is pinned at the bottom.
 - If both lists are empty, a short message says routines appear here once logged.
+
+If the log's source routine is renamed or edited from the picker, the log picks up the new name, and an unchanged draft picks up the new exercises.
 
 Tapping a row copies that routine into the log and returns to it. **New routine** closes the picker and opens the editor on an empty list.
 
@@ -128,7 +132,7 @@ Duplicates are resolved like this:
 
 ### Workout name and lists
 
-On saving, a routine that came from a saved routine sets `w.name`, even if it was edited in this log. A routine saved with **Save as** does the same. Otherwise the name is `Strength workout`. An empty routine resets it to `Strength workout`.
+On saving, a routine that came from a saved routine sets `w.name`, even if it was edited in this log. A routine saved with **Save as** does the same. Otherwise the name is `Strength workout`. Removing a log's routine resets the name to `Strength workout`. A log that never had a routine keeps its existing name unless a saved routine is chosen.
 
 The shared summary row adds the set count before kg, as in `1 h, 347 kcal, 14 sets, 3,120 kg`. The full breakdown is on the Routine card when a session is opened.
 
@@ -179,6 +183,7 @@ The fingerprint covers each exercise in order: its name, trimmed and lowercased 
 | `Db` | `Routine` model, new tables and queries: routines by kind, get, save, rename, delete, restore, auto-save, trim Recent, read and replace a workout's copy, last-time lookup, name suggestions. `deleteWorkout` also removes the copy. `workoutStats` adds volume from `workout_exercise` to its total. |
 | `RoutineCard` (new) | Builds the card for a draft and reports button taps. `LogWorkoutScreen` is already 340 lines, so this stays separate. |
 | `RoutineEditScreen` (new) | The editor. Takes a list of lifts and a done callback, and doesn't know where they came from. |
+| `RoutineDialogs` (new) | The Save as and rename dialogs, shared by the card and the picker. |
 | `RoutinePickerScreen` (new) | The Saved and Recent lists and row menus. Runs in pick mode from a log, or manage mode as the Routines screen. |
 | `LogWorkoutScreen` | Holds the draft and its source, shows the card, writes the copy and auto-saves. Undoing a delete restores the copy. |
 | `WorkoutsScreen` | Adds the **Routines** button to the header and the set count to the summary row. |

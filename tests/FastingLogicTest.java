@@ -400,7 +400,7 @@ public class FastingLogicTest {
                 FastingLogic.routineFingerprint(Arrays.asList(lift("A", 4, 8, 0), lift("B", 1, 1, 0)))),
                 "separators in a name can't collide");
         String usFingerprint = FastingLogic.routineFingerprint(Arrays.asList(lift("Incline press", 3, 10, 57.5)));
-        Locale.setDefault(new Locale("tr", "TR"));
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
         eq(usFingerprint, FastingLogic.routineFingerprint(Arrays.asList(lift("INCLINE PRESS", 3, 10, 57.5))),
                 "a fingerprint doesn't depend on the device locale");
         Locale.setDefault(Locale.US);

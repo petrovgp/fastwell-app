@@ -774,7 +774,7 @@ final class Db extends SQLiteOpenHelper {
         } finally { d.endTransaction(); }
     }
 
-    /** Auto-save on logging: reuses a matching routine (a saved one first), else adds a Recent one, keeping the newest 20. */
+    /** Auto-save on logging: reuses a matching routine (a saved one first), else adds a Recent one, keeping only the newest few. */
     void rememberRoutine(List<FastingLogic.Lift> lifts) {
         if (lifts.isEmpty()) return;
         SQLiteDatabase d = getWritableDatabase();

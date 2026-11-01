@@ -1,5 +1,7 @@
 package app.fastwell;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.res.ColorStateList;
 import android.text.Editable;
 import android.view.View;
@@ -184,6 +186,16 @@ final class LogWorkoutScreen extends Screen {
     /** Redraws the routine card from the current draft. */
     private void showRoutine() {
         if (routineBox == null) return;
+        // The picker can rename or edit the source; pick that up, and the exercises too if the draft was untouched.
+        Db.Routine stored = sourceId > 0 ? db.getRoutine(sourceId) : null;
+        if (stored != null) {
+            routineName = stored.name;
+            String print = FastingLogic.routineFingerprint(stored.lifts);
+            if (!print.equals(sourceFingerprint)) {
+                if (FastingLogic.routineFingerprint(lifts).equals(sourceFingerprint)) lifts = copyOf(stored.lifts);
+                sourceFingerprint = print;
+            }
+        }
         routineBox.removeAllViews();
         String title = routineName.isEmpty() ? "Routine" : routineName + (routineEdited() ? ", edited" : "");
         String updateName = routineEdited() && db.getRoutine(sourceId) != null ? routineName : null;
@@ -244,6 +256,11 @@ final class LogWorkoutScreen extends Screen {
         a.push(new RoutineEditScreen(a, title, start, w.id, false, new RoutineEditScreen.Done() {
             @Override
             public void on(List<FastingLogic.Lift> result) {
+                // Done with nothing on a new routine is a cancel: the draft stays as it was.
+                if (fresh && result.isEmpty()) {
+                    a.pop();
+                    return;
+                }
                 lifts = copyOf(result);
                 // A new routine has no name or source; cancelling the editor never gets here.
                 if (fresh || lifts.isEmpty()) {
@@ -422,7 +439,7 @@ final class LogWorkoutScreen extends Screen {
         w.endAt = w.startAt + w.durationSec * 1000L;
         if (!cardio) {
             // An older log opened with no routine keeps its typed name unless a named routine is chosen.
-            boolean keepsName = !isNew && loadedFingerprint.equals(FastingLogic.routineFingerprint(new ArrayList<FastingLogic.Lift>()));
+            boolean keepsName = !isNew && loadedFingerprint.isEmpty();
             if (!lifts.isEmpty() && !routineName.isEmpty()) w.name = routineName;
             else if (!keepsName) w.name = "Strength workout";
         }
@@ -436,6 +453,22 @@ final class LogWorkoutScreen extends Screen {
         hideKeyboard();
         a.pop();
         a.snack(w.name + " saved  -  " + FastingLogic.workoutDur(w.durationSec), null);
+    }
+
+    /** Strength asks before dropping a routine that changed since the form opened. */
+    @Override
+    boolean onBack() {
+        if (cardio || FastingLogic.routineFingerprint(lifts).equals(loadedFingerprint)) return false;
+        hideKeyboard();
+        new AlertDialog.Builder(a)
+                .setTitle("Discard changes?")
+                .setNegativeButton("Keep editing", null)
+                .setPositiveButton("Discard", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) { a.pop(); }
+                })
+                .show();
+        return true;
     }
 
     private void delete() {

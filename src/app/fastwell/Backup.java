@@ -77,7 +77,7 @@ final class Backup {
         }
         new AlertDialog.Builder(a)
                 .setTitle("Replace all data?")
-                .setMessage("Importing replaces every fast, meal and workout on this phone with the backup's contents.")
+                .setMessage("Importing replaces every fast, meal, workout and routine on this phone with the backup's contents.")
                 .setPositiveButton("Replace", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int w) {

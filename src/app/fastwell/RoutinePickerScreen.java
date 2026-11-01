@@ -49,7 +49,7 @@ final class RoutinePickerScreen extends Screen {
         col.addView(Ui.title(c, pick == null ? "Routines" : "Choose routine"));
         List<Db.Routine> saved = db.routines(true);
         List<Db.Routine> recent = db.routines(false);
-        if (recent.size() > 20) recent = new ArrayList<Db.Routine>(recent.subList(0, 20));
+        if (recent.size() > FastingLogic.RECENT_ROUTINES) recent = new ArrayList<Db.Routine>(recent.subList(0, FastingLogic.RECENT_ROUTINES));
         if (saved.isEmpty() && recent.isEmpty()) {
             col.addView(Ui.muted(c, "Routines appear here once you log or save one."));
         }

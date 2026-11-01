@@ -11,6 +11,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,6 +35,9 @@ final class RoutineEditScreen extends Screen {
     /** Index of the open row, or -1. */
     private int expanded = -1;
     private LinearLayout rowsBox;
+    private ScrollView scroll;
+    /** The row that was open at the last redraw, so only a change of open row scrolls. */
+    private int shownOpen = -1;
     private Button doneBtn;
     private TextView hintView;
     /** The open row's dial, stopped before anything reads or redraws the lifts so a rolling value can't change them later. */
@@ -74,7 +78,8 @@ final class RoutineEditScreen extends Screen {
             }
         });
         col.addView(add, Ui.lp(Ui.MATCH, Ui.dp(c, 56)));
-        root.addView(Ui.scroll(c, col), Ui.lp(Ui.MATCH, 0, 1f));
+        scroll = Ui.scroll(c, col);
+        root.addView(scroll, Ui.lp(Ui.MATCH, 0, 1f));
 
         LinearLayout bottom = Ui.hbox(c);
         bottom.setPadding(Ui.dp(c, 16), Ui.dp(c, 12), Ui.dp(c, 16), Ui.dp(c, 16));
@@ -102,6 +107,21 @@ final class RoutineEditScreen extends Screen {
             rowsBox.addView(i == expanded ? openRow(i, focusName) : closedRow(i));
         }
         updateDone();
+        if (expanded != shownOpen && expanded >= 0) scrollToOpen();
+        shownOpen = expanded;
+    }
+
+    /** After layout, brings the open card's top into view; closing the card above it moved the rows up under the old scroll. */
+    private void scrollToOpen() {
+        final int open = expanded;
+        scroll.post(new Runnable() {
+            @Override
+            public void run() {
+                if (open >= rowsBox.getChildCount()) return;
+                int top = rowsBox.getTop() + rowsBox.getChildAt(open).getTop() - Ui.dp(c, 12);
+                scroll.scrollTo(0, Math.max(0, top));
+            }
+        });
     }
 
     private View closedRow(final int i) {
@@ -269,8 +289,8 @@ final class RoutineEditScreen extends Screen {
     @Override
     boolean onBack() {
         stopDial();
-        if (FastingLogic.routineFingerprint(lifts).equals(startPrint)) return false;
         hideKeyboard();
+        if (FastingLogic.routineFingerprint(lifts).equals(startPrint)) return false;
         new AlertDialog.Builder(a)
                 .setTitle("Discard changes?")
                 .setNegativeButton("Keep editing", null)
