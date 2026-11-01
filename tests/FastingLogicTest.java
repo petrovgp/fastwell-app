@@ -318,6 +318,50 @@ public class FastingLogicTest {
         eq("74.2 kg", FastingLogic.weightSummary(new double[] {0, 74.2, 0}, "this week"), "one log has no change to show");
         eq("74.2 kg  -  down 0.8 kg this month", FastingLogic.weightSummary(new double[] {0, 75, 0, 74.5, 74.2, 0}, "this month"),
                 "first to last log of the range");
+        // weight trend: each log pulls the trend 10% of the way towards it, more after a gap
+        eq("[0.0, 80.0, 0.0]", Arrays.toString(FastingLogic.weightTrend(new double[] {0, 80, 0})), "trend starts at the first log");
+        double[] trend = FastingLogic.weightTrend(new double[] {80, 82});
+        eq(80.2, FastingLogic.tenth(trend[1]), "one log moves the trend a little");
+        trend = FastingLogic.weightTrend(new double[] {80, 0, 82});
+        eq(0.0, trend[1], "no trend point on a day without a log");
+        eq(80.38, Math.round(trend[2] * 100) / 100.0, "a gap of two days counts for two");
+        eq(0.0, FastingLogic.weightTrend(new double[3])[2], "no logs, no trend");
+        trend = FastingLogic.weightTrend(new double[] {80, 83, 79, 82, 78, 81});
+        eq(true, Math.abs(trend[5] - trend[4]) < 1, "the trend moves less than the logs");
+        eq(82.0, FastingLogic.lastLogged(new double[] {80, 82, 0}), "last logged skips empty days");
+        eq(0.0, FastingLogic.lastLogged(new double[3]), "nothing logged");
+        // weight rate over the last 28 days, in kg a day
+        double[] falling = new double[40];
+        for (int i = 0; i < falling.length; i++) falling[i] = 90 - 0.1 * i;
+        eq(-0.1, Math.round(FastingLogic.weightRate(falling) * 1000) / 1000.0, "steady loss");
+        double[] old = new double[40];
+        for (int i = 0; i < 10; i++) old[i] = 90 - i;
+        eq(true, Double.isNaN(FastingLogic.weightRate(old)), "logs older than 28 days don't count");
+        eq(true, Double.isNaN(FastingLogic.weightRate(new double[] {0, 80, 0, 79.5, 0, 79, 0, 0, 78.5})) == false, "four logs over seven days are enough");
+        eq(true, Double.isNaN(FastingLogic.weightRate(new double[] {80, 0, 79.5, 0, 0, 0, 0, 0, 0, 79})), "three logs aren't enough");
+        eq(true, Double.isNaN(FastingLogic.weightRate(new double[] {80, 79.9, 79.8, 79.7, 79.6, 79.5, 79.4})), "six days aren't enough");
+        // projected goal date
+        LocalDate nov1 = LocalDate.of(2026, 11, 1);
+        eq(LocalDate.of(2026, 12, 11), FastingLogic.projectedGoalDay(74, 70, -0.1, nov1), "losing towards a goal");
+        eq(LocalDate.of(2026, 12, 11), FastingLogic.projectedGoalDay(66, 70, 0.1, nov1), "gaining towards a goal");
+        eq(null, FastingLogic.projectedGoalDay(74, 70, 0.1, nov1), "moving away has no date");
+        eq(null, FastingLogic.projectedGoalDay(74, 70, 0, nov1), "flat has no date");
+        eq(null, FastingLogic.projectedGoalDay(74, 70, -0.005, nov1), "barely moving has no date");
+        eq(null, FastingLogic.projectedGoalDay(74, 70, Double.NaN, nov1), "unknown rate has no date");
+        eq(null, FastingLogic.projectedGoalDay(100, 70, -0.02, nov1), "over two years has no date");
+        // goal line on the weight card
+        java.time.format.DateTimeFormatter df = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+        eq("Goal 70.0 kg  -  around 11 Dec 2026 (0.7 kg a week)", FastingLogic.goalText(70, 80, 74, -0.1, nov1, df), "projected date and pace");
+        eq("Goal 70.0 kg  -  reached", FastingLogic.goalText(70, 80, 69.5, -0.1, nov1, df), "past a goal below the start");
+        eq("Goal 70.0 kg  -  reached", FastingLogic.goalText(70, 80, 70.1, 0, nov1, df), "close enough to the goal");
+        eq("Goal 70.0 kg  -  reached", FastingLogic.goalText(70, 60, 70.5, 0.1, nov1, df), "past a goal above the start");
+        eq("Goal 70.0 kg  -  keep logging for a projected date", FastingLogic.goalText(70, 80, 74, Double.NaN, nov1, df), "not enough logs");
+        eq("Goal 70.0 kg  -  no projected date at this pace", FastingLogic.goalText(70, 80, 74, 0.1, nov1, df), "moving away");
+        eq("Goal 70.0 kg", FastingLogic.goalText(70, 80, 0, Double.NaN, nov1, df), "no logs at all");
+        // surplus or deficit behind a target saved without one, in 5% steps
+        eq(-15, FastingLogic.nearestAdjust(2000, 2340, 30), "nearest step to the saved target");
+        eq(0, FastingLogic.nearestAdjust(2340, 2340, 30), "maintenance");
+        eq(-30, FastingLogic.nearestAdjust(1000, 2340, 30), "clamped to the largest deficit");
         // backups that can be restored
         List<String> allTables = new ArrayList<>(Arrays.asList(FastingLogic.BACKUP_TABLES));
         eq(null, FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "older backup without weight_log restores");

@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -96,6 +97,12 @@ final class FastingLogic {
         int fat = (int) Math.round(kcal * 0.28 / 9.0);
         int carbs = (int) Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4.0));
         return new int[] {protein, carbs, fat};
+    }
+
+    /** The surplus or deficit, in 5% steps, closest to a target that was saved without one. */
+    static int nearestAdjust(int kcalTarget, int maintenance, int maxPercent) {
+        double pct = kcalTarget * 100.0 / maintenance - 100;
+        return Math.max(-maxPercent, Math.min(maxPercent, (int) Math.round(pct / 5) * 5));
     }
 
     /** Column order of a macro percent split. */
@@ -470,6 +477,81 @@ final class FastingLogic {
         double d = tenth(to - from);
         if (d == 0) return "no change";
         return (d < 0 ? "down " : "up ") + kgText(Math.abs(d));
+    }
+
+    /** Days of logs behind the trend, so it has settled before the start of the charted range. */
+    static final int WEIGHT_HISTORY_DAYS = 120;
+    /** How far one day's log pulls the trend towards it. */
+    private static final double TREND_PULL = 0.1;
+    /** The days and logs a pace is worked out from. */
+    private static final int RATE_DAYS = 28, RATE_MIN_LOGS = 4, RATE_MIN_SPAN = 7;
+    /** Slower than this in kg a day, or further away than this in days, is no projection. */
+    private static final double MIN_RATE = 0.01;
+    private static final int MAX_PROJECTION_DAYS = 730;
+    /** A trend this close in kg counts as at the goal. */
+    private static final double GOAL_MARGIN = 0.2;
+
+    /**
+     * Smoothed weight per day, where 0 is a day without a log and has no trend point. Each log pulls the trend
+     * part of the way towards it, as if the trend had been pulled once a day through any gap before it.
+     */
+    static double[] weightTrend(double[] perDay) {
+        double[] out = new double[perDay.length];
+        double trend = 0;
+        int last = -1;
+        for (int i = 0; i < perDay.length; i++) {
+            double kg = perDay[i];
+            if (kg <= 0) continue;
+            trend = last < 0 ? kg : kg + (trend - kg) * Math.pow(1 - TREND_PULL, i - last);
+            out[i] = trend;
+            last = i;
+        }
+        return out;
+    }
+
+    /** The last value in perDay, where 0 is a day without one; 0 if there are none. */
+    static double lastLogged(double[] perDay) {
+        for (int i = perDay.length - 1; i >= 0; i--) if (perDay[i] > 0) return perDay[i];
+        return 0;
+    }
+
+    /** Pace in kg a day, the least-squares slope of the recent logs; NaN with too few of them to tell. */
+    static double weightRate(double[] perDay) {
+        int n = 0, first = -1, last = -1;
+        double sx = 0, sy = 0, sxx = 0, sxy = 0;
+        for (int i = Math.max(0, perDay.length - RATE_DAYS); i < perDay.length; i++) {
+            double kg = perDay[i];
+            if (kg <= 0) continue;
+            if (first < 0) first = i;
+            last = i;
+            n++;
+            sx += i;
+            sy += kg;
+            sxx += (double) i * i;
+            sxy += i * kg;
+        }
+        if (n < RATE_MIN_LOGS || last - first < RATE_MIN_SPAN) return Double.NaN;
+        return (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    }
+
+    /** The day the goal is reached at this pace in kg a day, or null if it isn't heading there in reasonable time. */
+    static LocalDate projectedGoalDay(double current, double goalKg, double rate, LocalDate today) {
+        if (Double.isNaN(rate) || Math.abs(rate) < MIN_RATE) return null;
+        double days = (goalKg - current) / rate;
+        if (days <= 0 || days > MAX_PROJECTION_DAYS) return null;
+        return today.plusDays(Math.round(days));
+    }
+
+    /** The goal and how it's going; current is the trend, 0 with no logs, and startKg what the goal was set from. */
+    static String goalText(double goalKg, double startKg, double current, double rate, LocalDate today, DateTimeFormatter dates) {
+        String goal = "Goal " + kgText(goalKg);
+        if (current <= 0) return goal;
+        boolean reached = goalKg < startKg ? current <= goalKg + GOAL_MARGIN : current >= goalKg - GOAL_MARGIN;
+        if (reached) return goal + "  -  reached";
+        if (Double.isNaN(rate)) return goal + "  -  keep logging for a projected date";
+        LocalDate day = projectedGoalDay(current, goalKg, rate, today);
+        if (day == null) return goal + "  -  no projected date at this pace";
+        return goal + "  -  around " + day.format(dates) + " (" + kgText(Math.abs(rate) * 7) + " a week)";
     }
 
     /** The latest weight and the change from the first log in perDay, where 0 is a day without a log. */

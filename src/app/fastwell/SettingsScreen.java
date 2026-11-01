@@ -52,6 +52,11 @@ final class SettingsScreen extends Screen {
             public void run() { a.push(OnboardingScreen.fromSettings(a, OnboardingScreen.WORKOUTS)); }
         }));
         t.addView(Ui.divider(c));
+        t.addView(row("Goal weight", prefs.goalKg() > 0 ? FastingLogic.kgText(prefs.goalKg()) : "Not set", new Runnable() {
+            @Override
+            public void run() { a.push(new GoalWeightScreen(a)); }
+        }));
+        t.addView(Ui.divider(c));
         t.addView(row("Profile",(prefs.male() ? "Male" : "Female") + ", " + prefs.age() + " y, " + prefs.heightCm() + " cm, "
                 + Ui.n1(prefs.weightKg()) + " kg", new Runnable() {
             @Override

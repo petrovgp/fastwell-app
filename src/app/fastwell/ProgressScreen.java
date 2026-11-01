@@ -76,7 +76,7 @@ final class ProgressScreen extends Screen {
             Double v = wt.get(days.get(i).toString());
             wv[i] = v == null ? 0 : v;
         }
-        col.addView(weightCard(wv, labels));
+        col.addView(weightCard(wv, labels, today));
 
         // Calories per day.
         Map<String, Double> kc = db.kcalByDay(from, to);
@@ -137,15 +137,38 @@ final class ProgressScreen extends Screen {
         return "Avg " + (unit.equals("h") ? Ui.n1(sum / n) : Ui.n0(sum / n)) + unit + " on " + n + (n == 1 ? " day" : " days");
     }
 
-    private View weightCard(double[] kg, String[] labels) {
+    private View weightCard(double[] kg, String[] labels, LocalDate today) {
+        // The whole history, so the trend and pace don't depend on the charted range.
+        List<LocalDate> history = FastingLogic.lastDays(today, FastingLogic.WEIGHT_HISTORY_DAYS);
+        Map<String, Double> logs = db.weightByDay(history.get(0).toString(), today.toString());
+        double[] all = new double[history.size()];
+        for (int i = 0; i < all.length; i++) {
+            Double v = logs.get(history.get(i).toString());
+            all[i] = v == null ? 0 : v;
+        }
+        double[] trend = FastingLogic.weightTrend(all);
+        float[] t = new float[kg.length];
+        int points = 0;
+        for (int i = 0; i < kg.length; i++) {
+            t[i] = (float) trend[all.length - kg.length + i];
+            if (t[i] > 0) points++;
+        }
+
         LinearLayout card = Ui.card(c);
         card.addView(Ui.text(c, "Weight", 16, R.color.text, true));
         card.addView(Ui.muted(c, FastingLogic.weightSummary(kg, rangeDays == 7 ? "this week" : "this month")));
+        float goal = prefs.goalKg();
+        card.addView(Ui.muted(c, goal > 0
+                ? FastingLogic.goalText(goal, prefs.goalStartKg(), FastingLogic.lastLogged(trend), FastingLogic.weightRate(all), today,
+                        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault()))
+                : "Set a goal weight in Settings"));
         float[] f = new float[kg.length];
         for (int i = 0; i < kg.length; i++) f[i] = (float) kg[i];
         Views.LineChart chart = new Views.LineChart(c, Ui.col(c, R.color.water));
         chart.setData(f, labels);
+        chart.setTrend(t, goal);
         card.addView(chart, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 150), 0, 12, 0, 0));
+        if (points > 1) card.addView(legend(R.color.water, "Trend"));
         return card;
     }
 
@@ -168,18 +191,18 @@ final class ProgressScreen extends Screen {
                 any |= raised[i] > 0;
             }
             chart.setRaised(extra, Ui.col(c, R.color.train));
-            if (any) card.addView(raisedLegend());
+            if (any) card.addView(legend(R.color.train, "Target raised by workouts"));
         }
         return card;
     }
 
-    private View raisedLegend() {
+    private View legend(int colorRes, String text) {
         LinearLayout row = Ui.hbox(c);
         row.setPadding(0, Ui.dp(c, 8), 0, 0);
         View swatch = new View(c);
-        swatch.setBackground(Ui.round(Ui.col(c, R.color.train), Ui.dp(c, 2)));
+        swatch.setBackground(Ui.round(Ui.col(c, colorRes), Ui.dp(c, 2)));
         row.addView(swatch, Ui.lpm(c, Ui.dp(c, 12), Ui.dp(c, 12), 0, 0, 6, 0));
-        row.addView(Ui.muted(c, "Target raised by workouts"));
+        row.addView(Ui.muted(c, text));
         return row;
     }
 }

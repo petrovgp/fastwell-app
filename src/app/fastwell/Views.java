@@ -225,6 +225,7 @@ final class Views {
     /**
      * Line through the logged days with x labels like Chart's. A value of 0 is a day without a log, which the line
      * passes over. The scale fits the logs instead of starting at 0, so a small change in weight still shows.
+     * An optional trend draws over the logs, which fade behind it, with a dashed goal line if the goal is on the scale.
      */
     static final class LineChart extends View {
         /** The least the scale covers, so a change of a tenth doesn't fill the chart. */
@@ -234,12 +235,19 @@ final class Views {
         private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint grid = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint trendLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint goalLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint goalLabel = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
+        private final int color;
         private float[] values = new float[0];
+        private float[] trend;
+        private float goal;
         private String[] labels = new String[0];
 
         LineChart(Context c, int color) {
             super(c);
+            this.color = color;
             line.setColor(color);
             line.setStyle(Paint.Style.STROKE);
             line.setStrokeWidth(Ui.dp(c, 2));
@@ -251,12 +259,43 @@ final class Views {
             label.setTextAlign(Paint.Align.CENTER);
             grid.setColor(Ui.col(c, R.color.outline));
             grid.setStrokeWidth(Ui.dp(c, 1));
+            trendLine.set(line);
+            trendLine.setStrokeWidth(Ui.dp(c, 2.5f));
+            goalLine.setColor(Ui.col(c, R.color.text2));
+            goalLine.setStyle(Paint.Style.STROKE);
+            goalLine.setStrokeWidth(Ui.dp(c, 1.25f));
+            goalLine.setPathEffect(new DashPathEffect(new float[] {Ui.dp(c, 4), Ui.dp(c, 4)}, 0));
+            goalLabel.setColor(Ui.col(c, R.color.text2));
+            goalLabel.setTextSize(Ui.dp(c, 11));
+            goalLabel.setTextAlign(Paint.Align.RIGHT);
         }
 
         void setData(float[] v, String[] l) {
             values = v;
             labels = l;
             invalidate();
+        }
+
+        /** The trend for each day, 0 for no point, and the goal, 0 for none; call after setData. */
+        void setTrend(float[] t, float goalValue) {
+            trend = t;
+            goal = goalValue;
+            line.setColor(Ui.alpha(color, 0.3f));
+            dot.setColor(Ui.alpha(color, 0.45f));
+            invalidate();
+        }
+
+        private void drawSeries(Canvas c, float[] v, Paint paint, float slot, float base, float h, float low, float span) {
+            path.rewind();
+            boolean first = true;
+            for (int i = 0; i < v.length; i++) {
+                if (v[i] <= 0) continue;
+                float x = slot * i + slot / 2, y = base - h * (v[i] - low) / span;
+                if (first) path.moveTo(x, y);
+                else path.lineTo(x, y);
+                first = false;
+            }
+            c.drawPath(path, paint);
         }
 
         @Override
@@ -273,20 +312,27 @@ final class Views {
                 min = Math.min(min, v);
                 max = Math.max(max, v);
             }
+            if (trend != null) {
+                for (float v : trend) {
+                    if (v <= 0) continue;
+                    min = Math.min(min, v);
+                    max = Math.max(max, v);
+                }
+            }
             float span = Math.max(max - min, MIN_SPAN) * 1.2f;
             float low = (min + max) / 2 - span / 2;
             float slot = getWidth() / (float) n;
             c.drawLine(0, base, getWidth(), base, grid);
-            path.rewind();
-            boolean first = true;
-            for (int i = 0; i < n; i++) {
-                if (values[i] <= 0) continue;
-                float x = slot * i + slot / 2, y = base - h * (values[i] - low) / span;
-                if (first) path.moveTo(x, y);
-                else path.lineTo(x, y);
-                first = false;
+            if (goal >= low && goal <= low + span) {
+                float y = base - h * (goal - low) / span;
+                path.rewind();
+                path.moveTo(0, y);
+                path.lineTo(getWidth(), y);
+                c.drawPath(path, goalLine);
+                c.drawText("Goal", getWidth(), y - Ui.dp(getContext(), 4), goalLabel);
             }
-            c.drawPath(path, line);
+            drawSeries(c, values, line, slot, base, h, low, span);
+            if (trend != null) drawSeries(c, trend, trendLine, slot, base, h, low, span);
             float radius = Ui.dp(getContext(), n > 14 ? 3 : 4);
             int step = n > 14 ? (int) Math.ceil(n / 7.0) : 1;
             for (int i = 0; i < n; i++) {

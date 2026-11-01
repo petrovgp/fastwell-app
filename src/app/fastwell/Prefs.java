@@ -89,6 +89,13 @@ final class Prefs {
 
     void setWeightKg(float weightKg) { p.edit().putFloat("weight", weightKg).apply(); }
 
+    /** Goal weight in kg, 0 for no goal, and the weight it was set from. */
+    float goalKg() { return p.getFloat("goal_kg", 0f); }
+    float goalStartKg() { return p.getFloat("goal_start_kg", 0f); }
+
+    void setGoal(float kg, float startKg) { p.edit().putFloat("goal_kg", kg).putFloat("goal_start_kg", startKg).apply(); }
+    void clearGoal() { p.edit().remove("goal_kg").remove("goal_start_kg").apply(); }
+
     boolean askedNotifPermission() { return p.getBoolean("asked_notif", false); }
     void setAskedNotifPermission() { p.edit().putBoolean("asked_notif", true).apply(); }
 

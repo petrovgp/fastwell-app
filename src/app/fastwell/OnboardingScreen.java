@@ -20,11 +20,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * First run, six steps: disclaimer, fasting plan, about you, daily target, water target, workout target. Continue is pinned at the bottom.
+ * First run, seven steps: disclaimer, fasting plan, about you, goal weight, daily target, water target, workout target. Continue is pinned at the bottom.
  * Settings opens about you, daily target, water target or workout target on its own, with the same layout.
  */
 final class OnboardingScreen extends Screen {
-    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4, WORKOUTS = 5;
+    static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4, WORKOUTS = 5, GOAL = 6;
     /** Largest calorie surplus or deficit, in percent. */
     static final int ADJUST_MAX = 30;
 
@@ -37,6 +37,8 @@ final class OnboardingScreen extends Screen {
     private int customHours = 16;
     private SettingsScreen.ProfileForm form;
 
+    /** Null until the goal dial moves, so going back to change the weight still starts it from there. */
+    private Double goalKg;
     private int adjust;
     private int[] split;
     /** Macro columns, least recently changed first; dragging one takes the difference from the others in this order. */
@@ -48,7 +50,7 @@ final class OnboardingScreen extends Screen {
     private int workouts;
     private int restDays;
 
-    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, TARGETS, WATER, WORKOUTS}, false, 0); }
+    OnboardingScreen(MainActivity a) { this(a, new int[] {DISCLAIMER, PLAN, ABOUT, GOAL, TARGETS, WATER, WORKOUTS}, false, 0); }
 
     private OnboardingScreen(MainActivity a, int[] steps, boolean settings, int step) {
         super(a);
@@ -87,6 +89,7 @@ final class OnboardingScreen extends Screen {
             col = Ui.column(c, 24);
             if (kind == DISCLAIMER) disclaimer(col);
             else if (kind == PLAN) plans(col);
+            else if (kind == GOAL) goal(col);
             else if (kind == WATER) water(col);
             else if (kind == WORKOUTS) workouts(col);
             else about(col);
@@ -107,6 +110,17 @@ final class OnboardingScreen extends Screen {
         if (kind == DISCLAIMER) {
             setEnabled(next, accepted);
             gate = next;
+        }
+        if (kind == GOAL) {
+            Button skip = Ui.outline(c, "Skip", R.color.text2);
+            skip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    goalKg = null;
+                    next();
+                }
+            });
+            bottom.addView(skip, Ui.lpm(c, Ui.MATCH, Ui.dp(c, 48), 0, 0, 0, 8));
         }
         bottom.addView(next, Ui.lp(Ui.MATCH, Ui.dp(c, 56)));
         root.addView(bottom, Ui.lp(Ui.MATCH, Ui.WRAP));
@@ -251,6 +265,27 @@ final class OnboardingScreen extends Screen {
         col.addView(card);
     }
 
+    // ---------- goal weight ----------
+
+    private void goal(LinearLayout col) {
+        final double current = FastingLogic.tenth(form().weightV());
+        col.addView(title(c, "Goal weight"));
+        col.addView(subtitle(c, "Optional. Used to project when you'll reach it. You can change this any time in Settings."));
+        final WeightDial dial = new WeightDial(c, goalKg != null ? goalKg : current);
+        final TextView note = Ui.muted(c, GoalWeightScreen.changeNote(current, dial.kg()));
+        dial.onChange(new Runnable() {
+            @Override
+            public void run() {
+                goalKg = dial.kg();
+                note.setText(GoalWeightScreen.changeNote(current, goalKg));
+            }
+        });
+        col.addView(dial.view, Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 8, 0, 0));
+        note.setGravity(Gravity.CENTER);
+        note.setPadding(0, Ui.dp(c, 12), 0, 0);
+        col.addView(note, Ui.lp(Ui.MATCH, Ui.WRAP));
+    }
+
     private SettingsScreen.ProfileForm form() {
         if (form == null) form = new SettingsScreen.ProfileForm(a, prefs);
         return form;
@@ -335,8 +370,7 @@ final class OnboardingScreen extends Screen {
             adjust = prefs.kcalAdjust();
             split = prefs.macroSplit();
         } else if (prefs.onboarded()) {
-            double pct = prefs.kcalTarget() * 100.0 / form().kcal() - 100;
-            adjust = Math.max(-ADJUST_MAX, Math.min(ADJUST_MAX, (int) Math.round(pct / 5) * 5));
+            adjust = FastingLogic.nearestAdjust(prefs.kcalTarget(), form().kcal(), ADJUST_MAX);
             split = FastingLogic.macroSplit(prefs.proteinTarget(), prefs.carbsTarget(), prefs.fatTarget());
         } else {
             adjust = 0;
@@ -474,6 +508,8 @@ final class OnboardingScreen extends Screen {
         prefs.setWaterTarget(waterMl);
         prefs.setWorkoutTarget(workouts, restDays);
         prefs.setPlan(planId, customHours);
+        // A goal of the current weight would count as reached from the start.
+        if (goalKg != null && goalKg != FastingLogic.tenth(form().weightV())) prefs.setGoal(goalKg.floatValue(), form().weightV());
         prefs.setOnboarded(true);
         a.finishOnboarding();
     }

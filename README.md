@@ -49,6 +49,8 @@ Track your fasts, meals and workouts in one place. Fastwell combines an intermit
 - See your day at a glance on the Today screen
 - Follow fasting hours, calories, training sessions and weight over the last week or month
 - Keep track of your current and best fasting streaks
+- Set a goal weight during setup or in Settings, follow a smoothed weight trend and see a projected date for your goal
+- Update your calorie and macro targets when you log a new weight
 
 | Today | Progress | Weight and calories |
 | :---: | :---: | :---: |

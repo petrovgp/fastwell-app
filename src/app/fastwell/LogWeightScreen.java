@@ -1,5 +1,7 @@
 package app.fastwell;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -86,10 +88,48 @@ final class LogWeightScreen extends Screen {
     }
 
     private void save() {
+        double before = prefs.weightKg();
         db.setWeight(day, kg);
         // A log for an earlier day doesn't replace the current weight.
-        prefs.setWeightKg(db.latestWeight().floatValue());
+        double now = db.latestWeight();
+        prefs.setWeightKg((float) now);
         a.pop();
         a.snack("Logged " + FastingLogic.kgText(kg), null);
+        if (FastingLogic.tenth(before) != FastingLogic.tenth(now)) offerTargets(before, now);
+    }
+
+    /** Offers the calorie and macro targets for a new current weight, keeping the surplus or deficit and the split. */
+    private void offerTargets(double before, double now) {
+        boolean saved = prefs.hasMacroSplit();
+        final int adjust = saved ? prefs.kcalAdjust()
+                : FastingLogic.nearestAdjust(prefs.kcalTarget(), maintenance(before), OnboardingScreen.ADJUST_MAX);
+        final int[] split = saved ? prefs.macroSplit()
+                : FastingLogic.macroSplit(prefs.proteinTarget(), prefs.carbsTarget(), prefs.fatTarget());
+        final int kcal = FastingLogic.adjustedKcal(maintenance(now), adjust);
+        final int[] g = FastingLogic.macroGrams(kcal, split);
+        final int protein = g[FastingLogic.PROTEIN], carbs = g[FastingLogic.CARBS], fat = g[FastingLogic.FAT];
+        if (kcal == prefs.kcalTarget() && protein == prefs.proteinTarget() && carbs == prefs.carbsTarget() && fat == prefs.fatTarget()) return;
+        new AlertDialog.Builder(a)
+                .setTitle("Update your targets?")
+                .setMessage("Your weight changed from " + FastingLogic.kgText(FastingLogic.tenth(before)) + " to " + FastingLogic.kgText(now) + ".\n\n"
+                        + "Calories: " + Ui.n0(prefs.kcalTarget()) + " to " + Ui.n0(kcal) + " kcal\n"
+                        + "Protein: " + prefs.proteinTarget() + " to " + protein + " g\n"
+                        + "Carbs: " + prefs.carbsTarget() + " to " + carbs + " g\n"
+                        + "Fat: " + prefs.fatTarget() + " to " + fat + " g")
+                .setPositiveButton("Update targets", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        prefs.setTargets(kcal, protein, carbs, fat);
+                        prefs.setMacroSplit(adjust, split);
+                        a.refresh();
+                        a.snack("Target set to " + Ui.n0(kcal) + " kcal", null);
+                    }
+                })
+                .setNegativeButton("Keep current", null)
+                .show();
+    }
+
+    private int maintenance(double kg) {
+        return FastingLogic.maintenanceKcal(prefs.male(), prefs.age(), prefs.heightCm(), kg, prefs.activity());
     }
 }
