@@ -437,6 +437,7 @@ public class MainActivity extends Activity {
             ((OnboardingScreen) screen).back();
             return;
         }
+        if (screen != null && screen.onBack()) return;
         if (!stack.isEmpty()) pop();
         else if (tab != TAB_TODAY) showTab(TAB_TODAY);
     }

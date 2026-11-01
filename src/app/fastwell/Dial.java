@@ -217,6 +217,12 @@ final class Dial extends View {
             String centerText = faded ? fmt(col, col.derive.of(src.value())) : fmt(col, col.value());
             float unitW = col.unit.isEmpty() ? 0 : unit.measureText(col.unit) + Ui.dp(getContext(), 4);
             float numW = num.measureText(centerText);
+            // Wide text (like Bodyweight) shrinks to fit the column; text that fits is untouched.
+            float fit = colW - Ui.dp(getContext(), 16);
+            if (numW + unitW > fit && numW > 0) {
+                num.setTextSize(big * Math.max(0.1f, fit - unitW) / numW);
+                numW = num.measureText(centerText);
+            }
             float left = cx - (numW + unitW) / 2f;
             float numCenter = left + numW / 2f;
 
@@ -234,6 +240,11 @@ final class Dial extends View {
                 double v = faded ? col.derive.of(src.valueAt(k)) : col.valueAt(k);
                 String s = fmt(col, v);
                 float tw = num.measureText(s);
+                if (tw > fit) {
+                    size *= fit / tw;
+                    num.setTextSize(size);
+                    tw = num.measureText(s);
+                }
                 num.setColor(faded ? Ui.alpha(muted, a * 0.5f) : Ui.alpha(ink, a));
                 c.drawText(s, numCenter - tw / 2f, y + size * 0.36f, num);
             }

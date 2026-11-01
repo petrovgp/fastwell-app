@@ -28,6 +28,9 @@ abstract class Screen {
 
     boolean showsNav() { return true; }
 
+    /** Return true when the screen handled back itself, so MainActivity doesn't leave it. */
+    boolean onBack() { return false; }
+
     /** True when the screen background is light, so system bar icons should be dark. */
     boolean lightBars() { return !Ui.night(c); }
 
