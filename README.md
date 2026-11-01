@@ -1,13 +1,13 @@
 # Fastwell
 
-![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)
+![Version 1.2.0](https://img.shields.io/badge/version-1.2.0-blue)
 ![Android 16 (API 36)](https://img.shields.io/badge/Android-16%20(API%2036)-brightgreen)
 ![Requires Android 8.0+](https://img.shields.io/badge/requires-Android%208.0%2B-lightgrey)
 
 Track your fasts, meals and workouts in one place. Fastwell combines an intermittent fasting timer with a food journal, a workout journal and progress charts. All your data stays on your phone.
 
 <p align="center">
-  <img src="docs/images/fastwell-demo.gif" alt="Tour of the Fastwell app: Today, Fast, Fasting stages, Food, Workouts and Progress screens" width="300">
+  <img src="docs/images/fastwell-demo.gif" alt="Tour of the Fastwell app: Today, Fast, Fasting stages, Food, Workouts, Log strength, Routine editor and Progress screens" width="300">
 </p>
 
 ## Features
@@ -36,7 +36,11 @@ Track your fasts, meals and workouts in one place. Fastwell combines an intermit
 
 ### Workouts
 - Log cardio and strength sessions with duration, effort and an optional note
-- Record a routine of exercises with sets, reps and weight in strength sessions, and reuse saved or recent routines
+- Add a routine to a strength session, with each exercise's sets, reps and weight or bodyweight
+- Reuse a saved or recent routine, as every routine you log is kept for next time
+- Save routines under a name and manage them from the Routines screen
+- Finish exercise names from faded suggestions as you type, and see what you lifted last time
+- See the sets and kilos lifted in each strength session
 - Pick from running, walking, cycling, swimming, rowing, elliptical and hiking, or name your own activity
 - Get a calorie estimate from your duration, effort and weight
 - Mark each session as fasted or fed
@@ -44,7 +48,11 @@ Track your fasts, meals and workouts in one place. Fastwell combines an intermit
 
 | Workouts | Log cardio | Log strength |
 | :---: | :---: | :---: |
-| <img src="docs/images/demo/05-workouts.png" alt="Workouts" width="240"> | <img src="docs/images/demo/11-log-cardio.png" alt="Log cardio" width="240"> | <img src="docs/images/demo/12-log-strength.png" alt="Log strength" width="240"> |
+| <img src="docs/images/demo/05-workouts.png" alt="Workouts with a Routines button" width="240"> | <img src="docs/images/demo/11-log-cardio.png" alt="Log cardio" width="240"> | <img src="docs/images/demo/12-log-strength.png" alt="Log strength with a routine card" width="240"> |
+
+| Routines | Routine editor | Exercise suggestion |
+| :---: | :---: | :---: |
+| <img src="docs/images/demo/15-routines.png" alt="Saved and recent routines" width="240"> | <img src="docs/images/demo/16-routine-editor.png" alt="Routine editor with sets, reps and weight dials" width="240"> | <img src="docs/images/demo/17-exercise-suggestion.png" alt="Exercise name finished by faded text in the field" width="240"> |
 
 ### Progress
 - See your day at a glance on the Today screen
@@ -75,7 +83,7 @@ Food search is the only feature that sends anything off your phone: your search 
 Fastwell gives general information, not medical advice.
 
 ## Install
-Copy `Fastwell-1.1.0.apk` to the phone, open it, and allow "Install unknown apps" for the app you opened it from.
+Copy `Fastwell-1.2.0.apk` to the phone, open it, and allow "Install unknown apps" for the app you opened it from.
 
 ## Build
 Works on Debian 12/13, Ubuntu 22.04+ and WSL. Install a JDK and three Android tools:
@@ -84,7 +92,7 @@ Works on Debian 12/13, Ubuntu 22.04+ and WSL. Install a JDK and three Android to
 
 Then:
 
-    ./build.sh          # -> out/Fastwell-1.1.0.apk
+    ./build.sh          # -> out/Fastwell-1.2.0.apk
     tests/run.sh        # JVM tests for the fasting/calorie/streak logic
 
 `dx` and the API 23 framework resources are bundled in `tools/` (see `tools/README.md`), so no distro Android SDK packages are needed. On the first run `build.sh` downloads the API 36 `android.jar` (~53 MB, from https://github.com/Reginer/aosp-android-jar) to `sdk/android-36.jar`.
