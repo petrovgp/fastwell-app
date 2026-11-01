@@ -36,6 +36,8 @@ final class RoutineEditScreen extends Screen {
     private LinearLayout rowsBox;
     private Button doneBtn;
     private TextView hintView;
+    /** The open row's dial, stopped before anything reads or redraws the lifts so a rolling value can't change them later. */
+    private Dial openDial;
 
     RoutineEditScreen(MainActivity a, String title, List<FastingLogic.Lift> start, long excludeWorkoutId, boolean needsOne, Done done) {
         super(a);
@@ -91,9 +93,11 @@ final class RoutineEditScreen extends Screen {
 
     /** Redraws only the rows, so the scroll position stays; the keyboard is hidden unless the name should be typed into. */
     private void rebuildRows(boolean focusName) {
+        stopDial();
         if (!focusName) hideKeyboard();
         rowsBox.removeAllViews();
         hintView = null;
+        openDial = null;
         for (int i = 0; i < lifts.size(); i++) {
             rowsBox.addView(i == expanded ? openRow(i, focusName) : closedRow(i));
         }
@@ -148,6 +152,7 @@ final class RoutineEditScreen extends Screen {
         updateHint(l);
 
         Dial d = new Dial(c);
+        openDial = d;
         d.addColumn("SETS", "", FastingLogic.SETS_MIN, FastingLogic.SETS_MAX, 1, 0, l.sets);
         d.addColumn("REPS", "", FastingLogic.REPS_MIN, FastingLogic.REPS_MAX, 1, 0, l.reps);
         int kg = d.addColumn("KG", "", 0, FastingLogic.LIFT_KG_MAX, FastingLogic.LIFT_KG_STEP, 1, l.weight);
@@ -243,7 +248,12 @@ final class RoutineEditScreen extends Screen {
         doneBtn.setAlpha(ok ? 1f : 0.4f);
     }
 
+    private void stopDial() {
+        if (openDial != null) openDial.stop();
+    }
+
     private void finish() {
+        stopDial();
         hideKeyboard();
         List<FastingLogic.Lift> out = new ArrayList<FastingLogic.Lift>();
         for (FastingLogic.Lift l : lifts) {
@@ -258,6 +268,7 @@ final class RoutineEditScreen extends Screen {
 
     @Override
     boolean onBack() {
+        stopDial();
         if (FastingLogic.routineFingerprint(lifts).equals(startPrint)) return false;
         hideKeyboard();
         new AlertDialog.Builder(a)
