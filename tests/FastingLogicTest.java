@@ -13,6 +13,9 @@ public class FastingLogicTest {
     }
     static long at(ZoneId z, int y, int m, int d, int h, int min) { return ZonedDateTime.of(y, m, d, h, min, 0, 0, z).toInstant().toEpochMilli(); }
 
+    /** A finished fast of 16 hours, as {start, end, met}. */
+    static long[] done(long end, int met) { return new long[]{end - 16 * 3_600_000L, end, met}; }
+
     public static void main(String[] a) {
         ZoneId z = ZoneId.of("Europe/Skopje");
         // plans
@@ -41,6 +44,9 @@ public class FastingLogicTest {
         eq(2110, FastingLogic.adjustedKcal(2340, -10), "10% deficit rounds to 10");
         eq(2690, FastingLogic.adjustedKcal(2340, 15), "15% surplus");
         eq(2340, FastingLogic.adjustedKcal(2340, 0), "maintenance");
+        eq(1200, FastingLogic.adjustedKcal(1210, -30), "a deficit can't go below the minimum target");
+        eq(1200, FastingLogic.adjustedKcal(1700, -30), "a deficit landing on 1190 stops at the minimum");
+        eq(1260, FastingLogic.adjustedKcal(1800, -30), "a deficit above the minimum is kept");
         int[] mg = FastingLogic.macroGrams(2000, new int[]{50, 30, 20});
         eq(250, mg[0], "carbs g");
         eq(150, mg[1], "protein g");
@@ -102,14 +108,14 @@ public class FastingLogicTest {
         // streaks
         LocalDate today = LocalDate.of(2026, 10, 28);
         List<long[]> f = new ArrayList<>();
-        f.add(new long[]{at(z, 2026, 10, 28, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 27, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 26, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 25, 12, 0), 0}); // missed goal breaks it
-        f.add(new long[]{at(z, 2026, 10, 24, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 23, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 22, 12, 0), 1});
-        f.add(new long[]{at(z, 2026, 10, 21, 12, 0), 1});
+        f.add(done(at(z, 2026, 10, 28, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 27, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 26, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 25, 12, 0), 0)); // missed goal breaks it
+        f.add(done(at(z, 2026, 10, 24, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 23, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 22, 12, 0), 1));
+        f.add(done(at(z, 2026, 10, 21, 12, 0), 1));
         int[] s = FastingLogic.streaks(f, today, z);
         eq(3, s[0], "current streak");
         eq(4, s[1], "best streak");
@@ -121,9 +127,22 @@ public class FastingLogicTest {
         eq(0, FastingLogic.streaks(new ArrayList<long[]>(), today, z)[1], "empty best");
         // fast ending just after local midnight counts for the new day
         List<long[]> mid = new ArrayList<>();
-        mid.add(new long[]{at(z, 2026, 10, 28, 0, 30), 1});
+        mid.add(done(at(z, 2026, 10, 28, 0, 30), 1));
         eq(1, FastingLogic.streaks(mid, today, z)[0], "after-midnight end counts for today");
-        // hours per day
+                // a multi-day fast counts for the days it covered and the day it ended, not the day it began
+        List<long[]> longFast = new ArrayList<>();
+        longFast.add(new long[]{at(z, 2026, 10, 26, 12, 0), at(z, 2026, 10, 28, 12, 0), 1});
+        longFast.add(done(at(z, 2026, 10, 26, 10, 0), 1));
+        int[] ls = FastingLogic.streaks(longFast, today, z);
+        eq(3, ls[0], "48h fast keeps the streak through the day it covered");
+        eq(3, ls[1], "48h fast counts towards the best streak");
+        List<long[]> night = new ArrayList<>();
+        night.add(new long[]{at(z, 2026, 10, 27, 20, 0), at(z, 2026, 10, 28, 12, 0), 1});
+        eq(1, FastingLogic.streaks(night, today, z)[0], "an overnight fast is one day, not two");
+        List<long[]> missed = new ArrayList<>();
+        missed.add(new long[]{at(z, 2026, 10, 26, 12, 0), at(z, 2026, 10, 28, 12, 0), 0});
+        eq(0, FastingLogic.streaks(missed, today, z)[1], "a multi-day fast that missed its goal counts for no days");
+// hours per day
         List<LocalDate> days = FastingLogic.lastDays(today, 7);
         eq(7, days.size(), "7 days");
         eq(today, days.get(6), "last day is today");
@@ -299,6 +318,17 @@ public class FastingLogicTest {
         eq("74.2 kg", FastingLogic.weightSummary(new double[] {0, 74.2, 0}, "this week"), "one log has no change to show");
         eq("74.2 kg  -  down 0.8 kg this month", FastingLogic.weightSummary(new double[] {0, 75, 0, 74.5, 74.2, 0}, "this month"),
                 "first to last log of the range");
+        // backups that can be restored
+        List<String> allTables = new ArrayList<>(Arrays.asList(FastingLogic.BACKUP_TABLES));
+        eq(null, FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "older backup without weight_log restores");
+        allTables.add("weight_log");
+        eq(null, FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "full backup restores");
+        eq("It was made by a newer version of Fastwell. Update the app first.",
+                FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION + 1, allTables), "newer backup is refused");
+        eq("It has no valid version number.", FastingLogic.backupProblem(0, allTables), "backup without a version is refused");
+        allTables.remove("food_entry");
+        eq("It's missing its food_entry data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, allTables), "missing table is refused");
+        eq("It's missing its fast data.", FastingLogic.backupProblem(FastingLogic.BACKUP_VERSION, new ArrayList<String>()), "empty tables are refused");
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }

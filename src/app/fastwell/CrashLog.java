@@ -20,10 +20,13 @@ import java.nio.charset.StandardCharsets;
 
 /** Saves the stack trace of a crash so it can be shown and copied on the next launch. */
 public class CrashLog extends Application {
+    /** This build's version name, from the manifest. */
+    static String version = "?";
 
     @Override
     public void onCreate() {
         super.onCreate();
+        version = versionName();
         final Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         final File file = file(this);
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
@@ -32,7 +35,7 @@ public class CrashLog extends Application {
                 try {
                     StringWriter sw = new StringWriter();
                     PrintWriter pw = new PrintWriter(sw);
-                    pw.println("Fastwell " + versionName() + " on Android " + Build.VERSION.RELEASE
+                    pw.println("Fastwell " + version + " on Android " + Build.VERSION.RELEASE
                             + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL);
                     pw.println("Thread: " + t.getName());
                     e.printStackTrace(pw);
@@ -57,6 +60,8 @@ public class CrashLog extends Application {
     }
 
     private static File file(Context c) { return new File(c.getFilesDir(), "last_crash.txt"); }
+
+    static void clear(Context c) { file(c).delete(); }
 
     /** Shows the saved report once, with a Copy button. Returns true if a dialog was shown. */
     static boolean showIfAny(final Context c) {

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -78,12 +79,15 @@ final class FastingLogic {
     };
     static final double[] ACTIVITY_FACTOR = {1.2, 1.375, 1.55, 1.725, 1.9};
 
+    /** The lowest maintenance estimate or daily calorie target. */
+    static final int MIN_KCAL = 1200;
+
     /** Mifflin-St Jeor maintenance estimate, rounded to 10 kcal. */
     static int maintenanceKcal(boolean male, int age, double heightCm, double weightKg, int activity) {
         double bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + (male ? 5 : -161);
         int a = Math.max(0, Math.min(ACTIVITY_FACTOR.length - 1, activity));
         long kcal = Math.round(bmr * ACTIVITY_FACTOR[a] / 10.0) * 10;
-        return (int) Math.max(1200, kcal);
+        return (int) Math.max(MIN_KCAL, kcal);
     }
 
     /** {protein g, carbs g, fat g} for a calorie target. */
@@ -97,9 +101,9 @@ final class FastingLogic {
     /** Column order of a macro percent split. */
     static final int CARBS = 0, PROTEIN = 1, FAT = 2;
 
-    /** Maintenance calories with a percent surplus (+) or deficit (-), rounded to 10 kcal. */
+    /** Maintenance calories with a percent surplus (+) or deficit (-), rounded to 10 kcal and never below MIN_KCAL. */
     static int adjustedKcal(int maintenance, int percent) {
-        return (int) Math.round(maintenance * (100 + percent) / 1000.0) * 10;
+        return Math.max(MIN_KCAL, (int) Math.round(maintenance * (100 + percent) / 1000.0) * 10);
     }
 
     /** {carbs g, protein g, fat g} for a calorie target split by {carbs, protein, fat} percent. */
@@ -171,14 +175,19 @@ final class FastingLogic {
     }
 
     /**
-     * Streaks of consecutive days that contain at least one completed fast that met its goal,
-     * attributed to the local day it ended. The current streak stays alive through today
-     * if yesterday was met. Returns {current, best}.
+     * Streaks of consecutive days that contain at least one completed fast that met its goal, given as
+     * {startAt, endAt, met}. A fast counts for the local day it ended and the whole days before that it
+     * covered, but not the day it began, so an overnight fast is one day. The current streak stays alive
+     * through today if yesterday was met. Returns {current, best}.
      */
-    static int[] streaks(List<long[]> endAtAndMet, LocalDate today, ZoneId zone) {
+    static int[] streaks(List<long[]> fasts, LocalDate today, ZoneId zone) {
         TreeSet<LocalDate> days = new TreeSet<LocalDate>();
-        for (long[] f : endAtAndMet) {
-            if (f[1] != 0) days.add(Instant.ofEpochMilli(f[0]).atZone(zone).toLocalDate());
+        for (long[] f : fasts) {
+            if (f[2] == 0) continue;
+            LocalDate end = Instant.ofEpochMilli(f[1]).atZone(zone).toLocalDate();
+            days.add(end);
+            LocalDate d = Instant.ofEpochMilli(f[0]).atZone(zone).toLocalDate().plusDays(1);
+            for (; d.isBefore(end); d = d.plusDays(1)) days.add(d);
         }
         int current = 0;
         LocalDate d = days.contains(today) ? today : today.minusDays(1);
@@ -428,6 +437,21 @@ final class FastingLogic {
         double v = 0;
         for (int i = 0; i < reps.length; i++) v += reps[i] * weights[i];
         return v;
+    }
+
+    // ---------- backup ----------
+
+    /** The format backups are written in. */
+    static final int BACKUP_VERSION = 1;
+    /** Tables every backup has; weight_log came later, so older backups don't. */
+    static final String[] BACKUP_TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set"};
+
+    /** Why a backup can't be restored, or null if it can. */
+    static String backupProblem(int version, Collection<String> tables) {
+        if (version > BACKUP_VERSION) return "It was made by a newer version of Fastwell. Update the app first.";
+        if (version < 1) return "It has no valid version number.";
+        for (String t : BACKUP_TABLES) if (!tables.contains(t)) return "It's missing its " + t + " data.";
+        return null;
     }
 
     // ---------- body weight ----------

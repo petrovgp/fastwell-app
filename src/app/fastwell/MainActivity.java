@@ -521,6 +521,19 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** Removes the journals, settings and crash report, then starts over from onboarding. */
+    void deleteAllData() {
+        db.deleteAll();
+        prefs.clear();
+        CrashLog.clear(this);
+        Notifier.refresh(this);
+        selectedDay = LocalDate.now();
+        tab = TAB_TODAY;
+        stack.clear();
+        setScreen(new OnboardingScreen(this));
+        snack("All data deleted", null);
+    }
+
     /** Date then time picker. */
     void pickDateTime(long initial, final LongCb cb) {
         final LocalDateTime init = LocalDateTime.ofInstant(Instant.ofEpochMilli(initial), ZoneId.systemDefault());
@@ -658,7 +671,7 @@ public class MainActivity extends Activity {
         try {
             JSONObject o = new JSONObject();
             o.put("app", "fastwell");
-            o.put("version", 1);
+            o.put("version", FastingLogic.BACKUP_VERSION);
             o.put("exportedAt", System.currentTimeMillis());
             o.put("prefs", prefs.toJson());
             o.put("tables", db.exportTables());
@@ -689,6 +702,8 @@ public class MainActivity extends Activity {
             }
             o = new JSONObject(sb.toString());
             if (!"fastwell".equals(o.optString("app"))) throw new IllegalArgumentException("Not a Fastwell backup");
+            String problem = FastingLogic.backupProblem(o.optInt("version"), Db.tablesIn(o.optJSONObject("tables")));
+            if (problem != null) throw new IllegalArgumentException(problem);
         } catch (Exception e) {
             Ui.toast(this, "Could not read backup: " + e.getMessage());
             return;

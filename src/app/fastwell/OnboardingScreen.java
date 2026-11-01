@@ -348,7 +348,8 @@ final class OnboardingScreen extends Screen {
     private void updateTargets(int maintenance) {
         int kcal = FastingLogic.adjustedKcal(maintenance, adjust);
         targetKcal.setText(Ui.n0(kcal));
-        targetNote.setText(adjust == 0 ? "Maintenance" : Math.abs(adjust) + "% " + (adjust < 0 ? "deficit" : "surplus"));
+        targetNote.setText(adjust == 0 ? "Maintenance" : adjust < 0 && kcal == FastingLogic.MIN_KCAL ? "Minimum target"
+                : Math.abs(adjust) + "% " + (adjust < 0 ? "deficit" : "surplus"));
         int[] g = FastingLogic.macroGrams(kcal, split);
         for (int i = 0; i < grams.length; i++) grams[i].setText(g[i] + " g");
     }

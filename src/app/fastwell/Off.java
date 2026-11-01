@@ -27,7 +27,6 @@ final class Off {
     private static final ExecutorService IO = Executors.newSingleThreadExecutor();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final String FIELDS = "code,product_name,brands,nutriments,serving_quantity";
-    private static final String UA = "Fastwell/1.0 (Android; personal food journal)";
 
     static void search(final String query, final Callback cb) {
         IO.execute(new Runnable() {
@@ -116,7 +115,7 @@ final class Off {
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setConnectTimeout(8000);
         con.setReadTimeout(12000);
-        con.setRequestProperty("User-Agent", UA);
+        con.setRequestProperty("User-Agent", "Fastwell/" + CrashLog.version + " (Android; personal food journal)");
         con.setRequestProperty("Accept", "application/json");
         try {
             InputStream is = con.getInputStream();

@@ -46,7 +46,7 @@ final class ProgressScreen extends Screen {
         // Streak.
         List<Db.Fast> all = db.completedFasts(1000);
         List<long[]> marks = new ArrayList<long[]>();
-        for (Db.Fast f : all) marks.add(new long[] {f.endAt, f.met() ? 1 : 0});
+        for (Db.Fast f : all) marks.add(new long[] {f.startAt, f.endAt, f.met() ? 1 : 0});
         int[] st = FastingLogic.streaks(marks, today, zone);
         LinearLayout streak = Ui.card(c);
         LinearLayout sr = Ui.hbox(c);

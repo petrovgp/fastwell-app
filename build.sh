@@ -14,6 +14,12 @@ DX_JAR="${DX_JAR:-tools/dx.jar}"
 KEYSTORE="${KEYSTORE:-keystore/fastwell.jks}"
 KS_PASS="${KS_PASS:-fastwell}"
 ANDROID_JAR_36_URL="https://raw.githubusercontent.com/Reginer/aosp-android-jar/main/android-36/android.jar"
+VERSION="$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)"
+if [ -z "$VERSION" ]; then
+  echo "No versionName in AndroidManifest.xml"
+  exit 1
+fi
+APK="out/Fastwell-$VERSION.apk"
 
 missing=""
 for t in java javac keytool aapt zipalign apksigner; do
@@ -64,6 +70,6 @@ if [ ! -f "$KEYSTORE" ]; then
     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Fastwell, O=Fastwell" 2>/dev/null
 fi
 apksigner sign --ks "$KEYSTORE" --ks-pass "pass:$KS_PASS" --ks-key-alias fastwell \
-  --min-sdk-version 26 --out out/Fastwell-1.0.0.apk build/aligned.apk
-apksigner verify out/Fastwell-1.0.0.apk
-echo "OK -> out/Fastwell-1.0.0.apk ($(du -h out/Fastwell-1.0.0.apk | cut -f1))"
+  --min-sdk-version 26 --out "$APK" build/aligned.apk
+apksigner verify "$APK"
+echo "OK -> $APK ($(du -h "$APK" | cut -f1))"

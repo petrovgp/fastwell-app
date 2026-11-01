@@ -56,7 +56,7 @@ final class FastHistoryScreen extends Screen {
         long total = 0;
         int met = 0;
         for (Db.Fast f : fasts) {
-            marks.add(new long[] {f.endAt, f.met() ? 1 : 0});
+            marks.add(new long[] {f.startAt, f.endAt, f.met() ? 1 : 0});
             total += f.endAt - f.startAt;
             if (f.met()) met++;
         }

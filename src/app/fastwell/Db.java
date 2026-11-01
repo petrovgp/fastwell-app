@@ -617,6 +617,14 @@ final class Db extends SQLiteOpenHelper {
         return out;
     }
 
+    /** The names of a backup's readable tables; tables may be null. */
+    static List<String> tablesIn(JSONObject tables) {
+        List<String> out = new ArrayList<String>();
+        if (tables == null) return out;
+        for (String t : TABLES) if (tables.optJSONArray(t) != null) out.add(t);
+        return out;
+    }
+
     void importTables(JSONObject tables) throws JSONException {
         SQLiteDatabase d = getWritableDatabase();
         d.beginTransaction();

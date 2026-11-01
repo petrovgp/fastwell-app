@@ -115,7 +115,7 @@ final class SettingsScreen extends Screen {
 
         col.addView(Ui.sectionTitle(c, "About"));
         LinearLayout ab = Ui.card(c);
-        ab.addView(Ui.text(c, "Fastwell 1.0.0", 15, R.color.text, true));
+        ab.addView(Ui.text(c, "Fastwell " + CrashLog.version, 15, R.color.text, true));
         ab.addView(Ui.muted(c, "All data stays on this phone. Food search uses Open Food Facts (openfoodfacts.org)."));
         TextView disc = Ui.muted(c, "Fastwell is not medical advice. Talk to a doctor before fasting if you are pregnant or "
                 + "breastfeeding, have diabetes, take medication, are under 18, or have a history of eating disorders.");
@@ -133,14 +133,12 @@ final class SettingsScreen extends Screen {
             public void onClick(View v) {
                 new AlertDialog.Builder(c)
                         .setTitle("Delete all data?")
-                        .setMessage("Every fast, meal and workout will be permanently removed. Export a backup first if you might want it back.")
+                        .setMessage("Every fast, meal, workout and weight log will be permanently removed, along with your profile, targets and settings. "
+                                + "Export a backup first if you might want it back.")
                         .setPositiveButton("Delete everything", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface d, int w) {
-                                db.deleteAll();
-                                Notifier.refresh(c);
-                                a.refresh();
-                                a.snack("All data deleted", null);
+                                a.deleteAllData();
                             }
                         })
                         .setNegativeButton("Cancel", null)

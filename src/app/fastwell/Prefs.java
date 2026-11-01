@@ -92,6 +92,8 @@ final class Prefs {
     boolean askedNotifPermission() { return p.getBoolean("asked_notif", false); }
     void setAskedNotifPermission() { p.edit().putBoolean("asked_notif", true).apply(); }
 
+    void clear() { p.edit().clear().apply(); }
+
     JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
         for (Map.Entry<String, ?> e : p.getAll().entrySet()) {
