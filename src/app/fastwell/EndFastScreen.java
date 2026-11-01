@@ -39,7 +39,7 @@ final class EndFastScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout bar = FastHistoryScreen.backHeader(a, "End fast");
+        LinearLayout bar = backHeader("End fast");
         bar.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 16), Ui.dp(c, 4));
         root.addView(bar);
 

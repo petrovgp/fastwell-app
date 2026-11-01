@@ -52,7 +52,7 @@ final class MonthPickerScreen extends Screen {
 
         LinearLayout col = Ui.vbox(c);
         col.setPadding(Ui.dp(c, 16), Ui.dp(c, 8), Ui.dp(c, 16), 0);
-        col.addView(FastHistoryScreen.backHeader(a, "Choose month"));
+        col.addView(backHeader("Choose month"));
         col.addView(summaryCard());
 
         dial = new Dial(c);

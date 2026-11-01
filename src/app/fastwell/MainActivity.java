@@ -3,8 +3,6 @@ package app.fastwell;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -14,29 +12,18 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.format.DateFormat;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-import android.widget.DatePicker;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.TimePicker;
 
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.lang.ref.WeakReference;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -70,8 +57,6 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Object backCallback;
     private int insetTop, insetBottom, insetLeft, insetRight, imeBottom;
-
-    interface LongCb { void on(long value); }
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -327,8 +312,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    int currentTab() { return tab; }
-
     Screen currentScreen() { return screen; }
 
     void push(Screen s) {
@@ -534,68 +517,11 @@ public class MainActivity extends Activity {
         snack("All data deleted", null);
     }
 
-    /** Date then time picker. */
-    void pickDateTime(long initial, final LongCb cb) {
-        final LocalDateTime init = LocalDateTime.ofInstant(Instant.ofEpochMilli(initial), ZoneId.systemDefault());
-        DatePickerDialog dp = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
-            @Override
-            public void onDateSet(DatePicker view, final int y, final int m, final int d) {
-                new TimePickerDialog(MainActivity.this, new TimePickerDialog.OnTimeSetListener() {
-                    @Override
-                    public void onTimeSet(TimePicker tv, int h, int min) {
-                        LocalDateTime t = LocalDateTime.of(y, m + 1, d, h, min);
-                        cb.on(t.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-                    }
-                }, init.getHour(), init.getMinute(), DateFormat.is24HourFormat(MainActivity.this)).show();
-            }
-        }, init.getYear(), init.getMonthValue() - 1, init.getDayOfMonth());
-        dp.getDatePicker().setMaxDate(System.currentTimeMillis());
-        dp.show();
-    }
-
     /** "Now" if the selected journal day is today, otherwise that day at the current clock time. */
     long timeOnSelectedDay() {
         if (selectedDay.equals(LocalDate.now())) return System.currentTimeMillis();
         return LocalDateTime.of(selectedDay, LocalTime.now().withSecond(0).withNano(0))
                 .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
-    /** Date strip used by Food and Workouts: previous day, tap for calendar, next day. */
-    View dateStrip() { return dateStrip(false); }
-
-    /** As {@link #dateStrip()}; when animated, the day label slides in from the side the day moved towards. */
-    View dateStrip(boolean animated) {
-        LinearLayout row = Ui.hbox(this);
-        row.setBackground(Ui.round(Ui.col(this, R.color.surface), Ui.dp(this, 24), Ui.col(this, R.color.outline), Ui.night(this) ? 0 : Ui.dp(this, 1)));
-        row.setLayoutParams(Ui.lpm(this, Ui.MATCH, Ui.WRAP, 0, 0, 0, 12));
-        ImageView prev = Ui.iconButton(this, R.drawable.ic_left, R.color.text, "Previous day");
-        prev.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { goToDay(selectedDay.minusDays(1)); }
-        });
-        TextView label = Ui.text(this, Ui.dayLabel(selectedDay), 16, R.color.text, true);
-        label.setGravity(Gravity.CENTER);
-        label.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 10));
-        Ui.clickable(label, 20);
-        label.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { push(screen.dayPicker()); }
-        });
-        ImageView next = Ui.iconButton(this, R.drawable.ic_right, R.color.text, "Next day");
-        final boolean isToday = !selectedDay.isBefore(LocalDate.now());
-        next.setAlpha(isToday ? 0.3f : 1f);
-        next.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isToday) return;
-                goToDay(selectedDay.plusDays(1));
-            }
-        });
-        row.addView(prev);
-        row.addView(label, Ui.lp(0, Ui.WRAP, 1f));
-        row.addView(next);
-        if (animated) Ui.slideIn(label, daySlide, 24);
-        return row;
     }
 
     /** Returns from the day picker to the journal it was opened from, showing day d. */
@@ -605,7 +531,7 @@ public class MainActivity extends Activity {
         pop();
     }
 
-    private void goToDay(LocalDate d) {
+    void goToDay(LocalDate d) {
         daySlide = Integer.signum(d.compareTo(selectedDay));
         selectedDay = d;
         refresh();
@@ -641,20 +567,12 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     void startExport() {
-        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("application/json");
-        i.putExtra(Intent.EXTRA_TITLE, "fastwell-backup-" + LocalDate.now() + ".json");
-        startActivityForResult(i, REQ_EXPORT);
+        startActivityForResult(Backup.exportIntent(), REQ_EXPORT);
     }
 
     @SuppressWarnings("deprecation")
     void startImport() {
-        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("*/*");
-        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {"application/json", "text/plain", "application/octet-stream"});
-        startActivityForResult(i, REQ_IMPORT);
+        startActivityForResult(Backup.importIntent(), REQ_IMPORT);
     }
 
     @Override
@@ -663,69 +581,7 @@ public class MainActivity extends Activity {
         super.onActivityResult(req, result, data);
         if (result != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        if (req == REQ_EXPORT) exportTo(uri);
-        else if (req == REQ_IMPORT) importFrom(uri);
-    }
-
-    private void exportTo(Uri uri) {
-        try {
-            JSONObject o = new JSONObject();
-            o.put("app", "fastwell");
-            o.put("version", FastingLogic.BACKUP_VERSION);
-            o.put("exportedAt", System.currentTimeMillis());
-            o.put("prefs", prefs.toJson());
-            o.put("tables", db.exportTables());
-            OutputStream os = getContentResolver().openOutputStream(uri, "wt");
-            try {
-                os.write(o.toString(1).getBytes(StandardCharsets.UTF_8));
-            } finally {
-                os.close();
-            }
-            snack("Backup saved", null);
-        } catch (Exception e) {
-            Ui.toast(this, "Export failed: " + e.getMessage());
-        }
-    }
-
-    private void importFrom(Uri uri) {
-        final JSONObject o;
-        try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            StringBuilder sb = new StringBuilder();
-            try {
-                BufferedReader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                char[] buf = new char[8192];
-                int n;
-                while ((n = r.read(buf)) > 0) sb.append(buf, 0, n);
-            } finally {
-                is.close();
-            }
-            o = new JSONObject(sb.toString());
-            if (!"fastwell".equals(o.optString("app"))) throw new IllegalArgumentException("Not a Fastwell backup");
-            String problem = FastingLogic.backupProblem(o.optInt("version"), Db.tablesIn(o.optJSONObject("tables")));
-            if (problem != null) throw new IllegalArgumentException(problem);
-        } catch (Exception e) {
-            Ui.toast(this, "Could not read backup: " + e.getMessage());
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Replace all data?")
-                .setMessage("Importing replaces every fast, meal and workout on this phone with the backup's contents.")
-                .setPositiveButton("Replace", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        try {
-                            db.importTables(o.getJSONObject("tables"));
-                            if (o.has("prefs")) prefs.fromJson(o.getJSONObject("prefs"));
-                            Notifier.refresh(MainActivity.this);
-                            showTab(TAB_TODAY);
-                            snack("Backup restored", null);
-                        } catch (Exception e) {
-                            Ui.toast(MainActivity.this, "Import failed: " + e.getMessage());
-                        }
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+        if (req == REQ_EXPORT) Backup.exportTo(this, uri);
+        else if (req == REQ_IMPORT) Backup.importFrom(this, uri);
     }
 }

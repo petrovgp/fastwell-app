@@ -38,7 +38,7 @@ final class FastHistoryScreen extends Screen {
     View build() {
         // Fixed, non-scrolling layout: header, compact stats, then the calendar takes whatever height is left.
         LinearLayout col = Ui.column(c, 12);
-        LinearLayout header = backHeader(a, "Fasting history");
+        LinearLayout header = backHeader("Fasting history");
         Button add = Ui.tonal(c, "+  Add", R.color.primary);
         add.setContentDescription("Add a past fast");
         add.setMinHeight(Ui.dp(c, 36));
@@ -84,21 +84,6 @@ final class FastHistoryScreen extends Screen {
         col.addView(calTitle);
         col.addView(calendar(fasts), Ui.lp(Ui.MATCH, 0, 1f));
         return col;
-    }
-
-    static LinearLayout backHeader(final MainActivity a, String title) {
-        LinearLayout h = Ui.hbox(a);
-        h.setPadding(0, Ui.dp(a, 8), 0, Ui.dp(a, 8));
-        ImageView back = Ui.iconButton(a, R.drawable.ic_left, R.color.text, "Back");
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { a.handleBack(); }
-        });
-        h.addView(back);
-        TextView t = Ui.text(a, title, 22, R.color.text, true);
-        t.setPadding(Ui.dp(a, 4), 0, 0, 0);
-        h.addView(t, Ui.lp(0, Ui.WRAP, 1f));
-        return h;
     }
 
     private View stat(String label, String value) {

@@ -99,6 +99,9 @@ final class FastingLogic {
         return new int[] {protein, carbs, fat};
     }
 
+    /** Largest calorie surplus or deficit, in percent. */
+    static final int ADJUST_MAX = 30;
+
     /** The surplus or deficit, in 5% steps, closest to a target that was saved without one. */
     static int nearestAdjust(int kcalTarget, int maintenance, int maxPercent) {
         double pct = kcalTarget * 100.0 / maintenance - 100;

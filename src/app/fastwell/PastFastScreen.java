@@ -73,7 +73,7 @@ final class PastFastScreen extends Screen {
 
         LinearLayout col = Ui.vbox(c);
         col.setPadding(Ui.dp(c, 16), Ui.dp(c, 8), Ui.dp(c, 16), 0);
-        col.addView(FastHistoryScreen.backHeader(a, original == null ? "Add a past fast" : "Edit fast"));
+        col.addView(backHeader(original == null ? "Add a past fast" : "Edit fast"));
         col.addView(summaryCard());
 
         LocalDateTime t = time(selected());

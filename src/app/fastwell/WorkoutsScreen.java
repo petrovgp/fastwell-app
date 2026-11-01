@@ -35,7 +35,7 @@ final class WorkoutsScreen extends Screen {
         FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Workouts", "Strength and cardio"));
-        col.addView(a.dateStrip(true));
+        col.addView(DateStrip.create(a));
         // Everything for the day itself, so it can slide in when the day changes.
         LinearLayout body = Ui.vbox(c);
         col.addView(body);

@@ -39,7 +39,7 @@ final class FoodScreen extends Screen {
         FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
         col.addView(Ui.header(c, "Food", "Calories and macros"));
-        col.addView(a.dateStrip(true));
+        col.addView(DateStrip.create(a));
         // Everything for the day itself, so it can slide in when the day changes.
         LinearLayout body = Ui.vbox(c);
         col.addView(body);

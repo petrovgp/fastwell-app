@@ -19,8 +19,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Minimal Open Food Facts client (search and barcode lookup). Results are delivered on the main thread. */
-final class Off {
-    private Off() {}
+final class OpenFoodFacts {
+    private OpenFoodFacts() {}
 
     interface Callback { void done(List<Db.Item> items, String error); }
 

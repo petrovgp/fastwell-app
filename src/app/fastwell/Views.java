@@ -8,7 +8,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.view.View;
 
-/** Custom drawn views: the fasting ring, a thin progress bar, and a bar chart. */
+/** Custom drawn views: the fasting ring, a thin progress bar, a bar chart and a line chart. */
 final class Views {
     private Views() {}
 

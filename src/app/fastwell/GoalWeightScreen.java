@@ -29,7 +29,7 @@ final class GoalWeightScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout header = FastHistoryScreen.backHeader(a, "Goal weight");
+        LinearLayout header = backHeader("Goal weight");
         header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
         root.addView(header);
 

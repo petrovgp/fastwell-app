@@ -28,7 +28,7 @@ final class DayFastsScreen extends Screen {
     @Override
     View build() {
         LinearLayout col = Ui.column(c, 24);
-        col.addView(FastHistoryScreen.backHeader(a, Ui.dayLabel(day)));
+        col.addView(backHeader(Ui.dayLabel(day)));
 
         // Re-queried on every build, so edits and deletes made in PastFastScreen show on return.
         List<Db.Fast> fasts = fastsEnding(db, day);

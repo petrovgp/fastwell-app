@@ -189,6 +189,17 @@ final class Db extends SQLiteOpenHelper {
         return f;
     }
 
+    private static ContentValues values(Fast f) {
+        ContentValues v = new ContentValues();
+        v.put("start_at", f.startAt);
+        v.put("end_at", f.endAt);
+        v.put("goal_min", f.goalMin);
+        v.put("plan", f.plan);
+        v.put("mood", f.mood);
+        v.put("note", f.note);
+        return v;
+    }
+
     private List<Fast> fasts(String where, String[] args, String limit) {
         List<Fast> out = new ArrayList<Fast>();
         Cursor c = getReadableDatabase().query("fast", null, where, args, null, null, "start_at DESC", limit);
@@ -237,25 +248,11 @@ final class Db extends SQLiteOpenHelper {
     }
 
     void updateFast(Fast f) {
-        ContentValues v = new ContentValues();
-        v.put("start_at", f.startAt);
-        v.put("end_at", f.endAt);
-        v.put("goal_min", f.goalMin);
-        v.put("plan", f.plan);
-        v.put("mood", f.mood);
-        v.put("note", f.note);
-        getWritableDatabase().update("fast", v, "id = ?", new String[] {String.valueOf(f.id)});
+        getWritableDatabase().update("fast", values(f), "id = ?", new String[] {String.valueOf(f.id)});
     }
 
     void insertFast(Fast f) {
-        ContentValues v = new ContentValues();
-        v.put("start_at", f.startAt);
-        v.put("end_at", f.endAt);
-        v.put("goal_min", f.goalMin);
-        v.put("plan", f.plan);
-        v.put("mood", f.mood);
-        v.put("note", f.note);
-        f.id = getWritableDatabase().insert("fast", null, v);
+        f.id = getWritableDatabase().insert("fast", null, values(f));
     }
 
     void deleteFast(long id) {
@@ -393,7 +390,7 @@ final class Db extends SQLiteOpenHelper {
         try {
             while (c.moveToNext()) {
                 Exercise e = new Exercise();
-                e.id = c.getLong(0); e.name = c.getString(0 + 1); e.muscle = c.getString(2);
+                e.id = c.getLong(0); e.name = c.getString(1); e.muscle = c.getString(2);
                 out.add(e);
             }
         } finally { c.close(); }

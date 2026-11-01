@@ -1,13 +1,11 @@
 package app.fastwell;
 
-import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -15,8 +13,6 @@ import android.widget.TextView;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -25,8 +21,6 @@ import java.util.Locale;
  */
 final class OnboardingScreen extends Screen {
     static final int DISCLAIMER = 0, PLAN = 1, ABOUT = 2, TARGETS = 3, WATER = 4, WORKOUTS = 5, GOAL = 6;
-    /** Largest calorie surplus or deficit, in percent. */
-    static final int ADJUST_MAX = 30;
 
     private final int[] steps;
     private final boolean settings;
@@ -35,7 +29,7 @@ final class OnboardingScreen extends Screen {
     private boolean accepted;
     private String planId = "16:8";
     private int customHours = 16;
-    private SettingsScreen.ProfileForm form;
+    private ProfileForm form;
 
     /** Null until the goal dial moves, so going back to change the weight still starts it from there. */
     private Double goalKg;
@@ -170,18 +164,6 @@ final class OnboardingScreen extends Screen {
         return bar;
     }
 
-    static TextView title(Context c, String s) {
-        TextView t = Ui.text(c, s, 28, R.color.text, true);
-        t.setPadding(Ui.dp(c, 4), Ui.dp(c, 12), 0, Ui.dp(c, 4));
-        return t;
-    }
-
-    static TextView subtitle(Context c, String s) {
-        TextView t = Ui.text(c, s, 15, R.color.text2, false);
-        t.setPadding(Ui.dp(c, 4), 0, 0, Ui.dp(c, 16));
-        return t;
-    }
-
     // ---------- disclaimer ----------
 
     private void disclaimer(LinearLayout col) {
@@ -190,8 +172,8 @@ final class OnboardingScreen extends Screen {
         logo.setContentDescription("Fastwell logo");
         LinearLayout.LayoutParams lp = Ui.lpm(c, Ui.dp(c, 64), Ui.dp(c, 64), 4, 16, 0, 4);
         col.addView(logo, lp);
-        col.addView(title(c, "Welcome to Fastwell"));
-        col.addView(subtitle(c, "Track your fasts, meals and workouts in one place."));
+        col.addView(Ui.title(c, "Welcome to Fastwell"));
+        col.addView(Ui.subtitle(c, "Track your fasts, meals and workouts in one place."));
 
         LinearLayout card = Ui.card(c);
         card.addView(Ui.text(c, "Before you start", 17, R.color.text, true));
@@ -238,8 +220,8 @@ final class OnboardingScreen extends Screen {
     // ---------- fasting plan ----------
 
     private void plans(LinearLayout col) {
-        col.addView(title(c, "Your fasting plan"));
-        col.addView(subtitle(c, "How long do you want to fast each day? You can change this any time."));
+        col.addView(Ui.title(c, "Your fasting plan"));
+        col.addView(Ui.subtitle(c, "How long do you want to fast each day? You can change this any time."));
         PlanCards.add(a, col, planId, customHours, new PlanCards.Cb() {
             @Override
             public void on(String id, int h) {
@@ -255,9 +237,9 @@ final class OnboardingScreen extends Screen {
     // ---------- about you ----------
 
     private void about(LinearLayout col) {
-        col.addView(title(c, "About you"));
-        col.addView(subtitle(c, "Used only to suggest a daily calorie target. Stored on this phone."));
-        SettingsScreen.ProfileForm f = form();
+        col.addView(Ui.title(c, "About you"));
+        col.addView(Ui.subtitle(c, "Used only to suggest a daily calorie target. Stored on this phone."));
+        ProfileForm f = form();
         ViewGroup parent = (ViewGroup) f.view.getParent();
         if (parent != null) parent.removeView(f.view);
         LinearLayout card = Ui.card(c);
@@ -269,8 +251,8 @@ final class OnboardingScreen extends Screen {
 
     private void goal(LinearLayout col) {
         final double current = FastingLogic.tenth(form().weightV());
-        col.addView(title(c, "Goal weight"));
-        col.addView(subtitle(c, "Optional. Used to project when you'll reach it. You can change this any time in Settings."));
+        col.addView(Ui.title(c, "Goal weight"));
+        col.addView(Ui.subtitle(c, "Optional. Used to project when you'll reach it. You can change this any time in Settings."));
         final WeightDial dial = new WeightDial(c, goalKg != null ? goalKg : current);
         final TextView note = Ui.muted(c, GoalWeightScreen.changeNote(current, dial.kg()));
         dial.onChange(new Runnable() {
@@ -286,8 +268,8 @@ final class OnboardingScreen extends Screen {
         col.addView(note, Ui.lp(Ui.MATCH, Ui.WRAP));
     }
 
-    private SettingsScreen.ProfileForm form() {
-        if (form == null) form = new SettingsScreen.ProfileForm(a, prefs);
+    private ProfileForm form() {
+        if (form == null) form = new ProfileForm(a, prefs);
         return form;
     }
 
@@ -297,8 +279,8 @@ final class OnboardingScreen extends Screen {
     private void targets(LinearLayout col) {
         initTargets();
         final int maintenance = form().kcal();
-        col.addView(title(c, "Daily target"));
-        col.addView(subtitle(c, "Adjust calories, then split into macros."));
+        col.addView(Ui.title(c, "Daily target"));
+        col.addView(Ui.subtitle(c, "Adjust calories, then split into macros."));
 
         // Read-only, drawn faded like a dial's derived column.
         int faded = Ui.alpha(Ui.col(c, R.color.text2), 0.5f);
@@ -312,7 +294,7 @@ final class OnboardingScreen extends Screen {
 
         LinearLayout row = Ui.hbox(c);
         Dial adjustDial = new Dial(c);
-        adjustDial.addColumn("ADJUST", "%", -ADJUST_MAX, ADJUST_MAX, 5, 0, adjust);
+        adjustDial.addColumn("ADJUST", "%", -FastingLogic.ADJUST_MAX, FastingLogic.ADJUST_MAX, 5, 0, adjust);
         adjustDial.setFormat(0, new Dial.Format() {
             @Override
             public String of(double v) { return (v > 0 ? "+" : "") + Math.round(v); }
@@ -370,7 +352,7 @@ final class OnboardingScreen extends Screen {
             adjust = prefs.kcalAdjust();
             split = prefs.macroSplit();
         } else if (prefs.onboarded()) {
-            adjust = FastingLogic.nearestAdjust(prefs.kcalTarget(), form().kcal(), ADJUST_MAX);
+            adjust = FastingLogic.nearestAdjust(prefs.kcalTarget(), form().kcal(), FastingLogic.ADJUST_MAX);
             split = FastingLogic.macroSplit(prefs.proteinTarget(), prefs.carbsTarget(), prefs.fatTarget());
         } else {
             adjust = 0;
@@ -398,8 +380,8 @@ final class OnboardingScreen extends Screen {
     // ---------- water target ----------
 
     private void water(LinearLayout col) {
-        col.addView(title(c, "Water target"));
-        col.addView(subtitle(c, "How much do you want to drink each day? You can change this any time."));
+        col.addView(Ui.title(c, "Water target"));
+        col.addView(Ui.subtitle(c, "How much do you want to drink each day? You can change this any time."));
         Dial dial = new Dial(c);
         dial.addColumn("WATER", "ml", FastingLogic.WATER_MIN, FastingLogic.WATER_MAX, FastingLogic.WATER_STEP, 0, waterMl);
         dial.setFormat(0, new Dial.Format() {
@@ -416,8 +398,8 @@ final class OnboardingScreen extends Screen {
     // ---------- workout target ----------
 
     private void workouts(LinearLayout col) {
-        col.addView(title(c, "Workout target"));
-        col.addView(subtitle(c, "How many workouts do you want to do each day? You can change this any time."));
+        col.addView(Ui.title(c, "Workout target"));
+        col.addView(Ui.subtitle(c, "How many workouts do you want to do each day? You can change this any time."));
         Dial dial = new Dial(c);
         dial.addColumn("WORKOUTS", "per day", FastingLogic.WORKOUT_MIN, FastingLogic.WORKOUT_MAX, 1, 0, workouts);
         dial.setListener(new Dial.Listener() {
@@ -426,7 +408,7 @@ final class OnboardingScreen extends Screen {
         });
         col.addView(dial, Ui.lp(Ui.MATCH, Ui.WRAP));
 
-        col.addView(SettingsScreen.ProfileForm.label(a, "Rest days", "No workout target on these days."));
+        col.addView(ProfileForm.label(a, "Rest days", "No workout target on these days."));
         LinearLayout days = Ui.hbox(c);
         DayOfWeek first = WeekFields.of(Locale.getDefault()).getFirstDayOfWeek();
         for (int i = 0; i < 7; i++) {

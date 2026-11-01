@@ -80,7 +80,7 @@ final class LogFoodScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout header = FastHistoryScreen.backHeader(a, "");
+        LinearLayout header = backHeader("");
         header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
         title = (TextView) header.getChildAt(1);
         header.addView(Ui.chip(c, Ui.dayLabel(a.selectedDay), R.color.eat));
@@ -119,13 +119,8 @@ final class LogFoodScreen extends Screen {
 
     // ---------- meal bar ----------
 
-    /** Called with the meal whose pill was tapped. */
-    interface MealPicked {
-        void picked(int meal);
-    }
-
     private View mealBar() {
-        return mealBar(c, FastingLogic.MEALS.length, mealPills, new MealPicked() {
+        return MealBar.create(c, FastingLogic.MEALS.length, mealPills, new MealBar.Picked() {
             @Override
             public void picked(int m) {
                 meal = m;
@@ -134,48 +129,9 @@ final class LogFoodScreen extends Screen {
         });
     }
 
-    /** The first {@code count} meals as pills in one rounded bar, like the date strip; fills {@code pills}. */
-    static View mealBar(Context c, int count, List<TextView> pills, final MealPicked listener) {
-        LinearLayout bar = Ui.hbox(c);
-        int p = Ui.dp(c, 4);
-        bar.setPadding(p, p, p, p);
-        bar.setBackground(Ui.round(Ui.col(c, R.color.surface), Ui.dp(c, 24), Ui.col(c, R.color.outline), Ui.night(c) ? 0 : Ui.dp(c, 1)));
-        pills.clear();
-        for (int i = 0; i < count; i++) {
-            final int m = i;
-            TextView pill = Ui.text(c, FastingLogic.MEALS[i], 13, R.color.text2, true);
-            pill.setGravity(Gravity.CENTER);
-            pill.setSingleLine(true);
-            pill.setPadding(Ui.dp(c, 6), Ui.dp(c, 10), Ui.dp(c, 6), Ui.dp(c, 10));
-            pill.setClickable(true);
-            pill.setFocusable(true);
-            pill.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) { listener.picked(m); }
-            });
-            pills.add(pill);
-            bar.addView(pill, Ui.lp(Ui.WRAP, Ui.WRAP, 1f));
-        }
-        LinearLayout.LayoutParams lp = Ui.lpm(c, Ui.MATCH, Ui.WRAP, 0, 4, 0, 16);
-        bar.setLayoutParams(lp);
-        return bar;
-    }
-
-    /** Restyles the meal pills in place. */
-    static void showMealPills(Context c, List<TextView> pills, int meal) {
-        for (int i = 0; i < pills.size(); i++) {
-            TextView pill = pills.get(i);
-            boolean on = i == meal;
-            int fill = on ? Ui.alpha(Ui.col(c, R.color.eat), Ui.night(c) ? 0.22f : 0.14f) : 0;
-            pill.setBackground(Ui.ripple(c, Ui.round(fill, Ui.dp(c, 20)), Ui.dp(c, 20)));
-            pill.setTextColor(Ui.col(c, on ? R.color.eat : R.color.text2));
-            pill.setContentDescription(FastingLogic.MEALS[i] + (on ? ", selected" : ""));
-        }
-    }
-
     /** Updates the meal pills and swaps the food and water panes. */
     private void showMeal() {
-        showMealPills(c, mealPills, meal);
+        MealBar.show(c, mealPills, meal);
         boolean isWater = meal == FastingLogic.WATER;
         title.setText(isWater ? "Log water" : "Log food");
         foodPane.setVisibility(isWater ? View.GONE : View.VISIBLE);
@@ -300,7 +256,7 @@ final class LogFoodScreen extends Screen {
         savedCount = results.size();
         status = "Searching Open Food Facts...";
         renderResults();
-        Off.search(query, new Off.Callback() {
+        OpenFoodFacts.search(query, new OpenFoodFacts.Callback() {
             @Override
             public void done(List<Db.Item> items, String error) {
                 // Ignore answers to an older search, or arriving after the screen was closed.

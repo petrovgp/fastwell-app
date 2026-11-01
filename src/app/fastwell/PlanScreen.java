@@ -36,8 +36,8 @@ final class PlanScreen extends Screen {
         root.addView(bar);
 
         LinearLayout col = Ui.column(c, 24);
-        col.addView(OnboardingScreen.title(c, "Your fasting plan"));
-        col.addView(OnboardingScreen.subtitle(c, "How long do you want to fast each day? You can change this any time."));
+        col.addView(Ui.title(c, "Your fasting plan"));
+        col.addView(Ui.subtitle(c, "How long do you want to fast each day? You can change this any time."));
         PlanCards.add(a, col, planId, customHours, new PlanCards.Cb() {
             @Override
             public void on(String id, int h) {

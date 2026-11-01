@@ -317,6 +317,18 @@ final class Ui {
         return l;
     }
 
+    static TextView title(Context c, String s) {
+        TextView t = text(c, s, 28, R.color.text, true);
+        t.setPadding(dp(c, 4), dp(c, 12), 0, dp(c, 4));
+        return t;
+    }
+
+    static TextView subtitle(Context c, String s) {
+        TextView t = text(c, s, 15, R.color.text2, false);
+        t.setPadding(dp(c, 4), 0, 0, dp(c, 16));
+        return t;
+    }
+
     static LinearLayout header(Context c, String title, String subtitle) {
         LinearLayout h = vbox(c);
         h.setPadding(dp(c, 4), dp(c, 12), dp(c, 4), dp(c, 12));

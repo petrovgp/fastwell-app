@@ -46,7 +46,7 @@ final class EditFoodScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout header = FastHistoryScreen.backHeader(a, isWater ? "Edit water entry" : "Edit food entry");
+        LinearLayout header = backHeader(isWater ? "Edit water entry" : "Edit food entry");
         header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
         root.addView(header);
 
@@ -55,7 +55,7 @@ final class EditFoodScreen extends Screen {
             col.addView(amountCard());
         } else {
             col.addView(Ui.sectionTitle(c, "Category"));
-            col.addView(LogFoodScreen.mealBar(c, FastingLogic.WATER, mealPills, new LogFoodScreen.MealPicked() {
+            col.addView(MealBar.create(c, FastingLogic.WATER, mealPills, new MealBar.Picked() {
                 @Override
                 public void picked(int m) {
                     meal = m;
@@ -153,7 +153,7 @@ final class EditFoodScreen extends Screen {
 
     private void update() {
         if (!isWater) {
-            LogFoodScreen.showMealPills(c, mealPills, meal);
+            MealBar.show(c, mealPills, meal);
             double k = amount() / base;
             kcalVal.setText(Ui.n0(food.kcal * k) + " kcal");
             proteinVal.setText(Ui.n1(food.protein * k) + " g");

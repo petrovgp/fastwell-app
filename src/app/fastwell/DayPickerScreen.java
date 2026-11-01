@@ -50,7 +50,7 @@ final class DayPickerScreen extends Screen {
 
         LinearLayout col = Ui.vbox(c);
         col.setPadding(Ui.dp(c, 16), Ui.dp(c, 8), Ui.dp(c, 16), 0);
-        col.addView(FastHistoryScreen.backHeader(a, title));
+        col.addView(backHeader(title));
         col.addView(summaryCard());
 
         dial = new Dial(c);

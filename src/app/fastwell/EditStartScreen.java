@@ -65,7 +65,7 @@ final class EditStartScreen extends Screen {
 
         LinearLayout col = Ui.vbox(c);
         col.setPadding(Ui.dp(c, 16), 0, Ui.dp(c, 16), 0);
-        col.addView(OnboardingScreen.title(c, "Edit start time"));
+        col.addView(Ui.title(c, "Edit start time"));
         col.addView(summaryCard());
 
         LocalDateTime t = LocalDateTime.ofInstant(Instant.ofEpochMilli(startAt), ZoneId.systemDefault());

@@ -38,7 +38,7 @@ final class LogWeightScreen extends Screen {
         LinearLayout root = Ui.vbox(c);
         root.setBackgroundColor(Ui.col(c, R.color.bg));
 
-        LinearLayout header = FastHistoryScreen.backHeader(a, "Log weight");
+        LinearLayout header = backHeader("Log weight");
         header.setPadding(Ui.dp(c, 16), Ui.dp(c, 16), Ui.dp(c, 16), 0);
         header.addView(Ui.chip(c, Ui.dayLabel(a.selectedDay), R.color.eat));
         root.addView(header);
@@ -102,7 +102,7 @@ final class LogWeightScreen extends Screen {
     private void offerTargets(double before, double now) {
         boolean saved = prefs.hasMacroSplit();
         final int adjust = saved ? prefs.kcalAdjust()
-                : FastingLogic.nearestAdjust(prefs.kcalTarget(), maintenance(before), OnboardingScreen.ADJUST_MAX);
+                : FastingLogic.nearestAdjust(prefs.kcalTarget(), maintenance(before), FastingLogic.ADJUST_MAX);
         final int[] split = saved ? prefs.macroSplit()
                 : FastingLogic.macroSplit(prefs.proteinTarget(), prefs.carbsTarget(), prefs.fatTarget());
         final int kcal = FastingLogic.adjustedKcal(maintenance(now), adjust);
