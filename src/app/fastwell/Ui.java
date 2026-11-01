@@ -368,6 +368,10 @@ final class Ui {
         return DateFormat.format("EEE d MMM, ", new Date(t)) + time(c, t);
     }
 
+    static String shortDate(long t) {
+        return new java.text.SimpleDateFormat("d MMM", Locale.getDefault()).format(new Date(t));
+    }
+
     static String dayLabel(LocalDate d) {
         LocalDate today = LocalDate.now();
         if (d.equals(today)) return "Today";

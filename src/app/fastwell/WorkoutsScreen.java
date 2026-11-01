@@ -34,7 +34,15 @@ final class WorkoutsScreen extends Screen {
     View build() {
         FrameLayout root = new FrameLayout(c);
         LinearLayout col = Ui.column(c, 96);
-        col.addView(Ui.header(c, "Workouts", "Strength and cardio"));
+        LinearLayout top = Ui.hbox(c);
+        top.addView(Ui.header(c, "Workouts", "Strength and cardio"), Ui.lp(0, Ui.WRAP, 1f));
+        Button routines = Ui.tonal(c, "Routines", R.color.train);
+        routines.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { a.push(new RoutinePickerScreen(a, null)); }
+        });
+        top.addView(routines, Ui.lp(Ui.WRAP, Ui.dp(c, 40)));
+        col.addView(top);
         col.addView(DateStrip.create(a));
         // Everything for the day itself, so it can slide in when the day changes.
         LinearLayout body = Ui.vbox(c);
