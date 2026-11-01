@@ -36,6 +36,7 @@ Track your fasts, meals and workouts in one place. Fastwell combines an intermit
 
 ### Workouts
 - Log cardio and strength sessions with duration, effort and an optional note
+- Record a routine of exercises with sets, reps and weight in strength sessions, and reuse saved or recent routines
 - Pick from running, walking, cycling, swimming, rowing, elliptical and hiking, or name your own activity
 - Get a calorie estimate from your duration, effort and weight
 - Mark each session as fasted or fed
