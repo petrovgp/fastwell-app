@@ -72,6 +72,14 @@ final class Db extends SQLiteOpenHelper {
         double distanceKm, kcal;
     }
 
+    static final class Routine {
+        long id, lastUsed;
+        String name = "";
+        List<FastingLogic.Lift> lifts = new ArrayList<FastingLogic.Lift>();
+
+        boolean named() { return !name.isEmpty(); }
+    }
+
     static final class WSet {
         long id, workoutId, exerciseId;
         int ord, reps;
@@ -89,9 +97,10 @@ final class Db extends SQLiteOpenHelper {
         return inst;
     }
 
-    private Db(Context c) { super(c, "fastwell.db", null, 3); }
+    private Db(Context c) { super(c, "fastwell.db", null, 4); }
 
-    static final String[] TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set", "weight_log"};
+    static final String[] TABLES = {"fast", "food_entry", "food_item", "exercise", "workout", "workout_set", "weight_log",
+            "routine", "routine_exercise", "workout_exercise"};
 
     @Override
     public void onCreate(SQLiteDatabase d) {
@@ -113,6 +122,7 @@ final class Db extends SQLiteOpenHelper {
                 + "exercise_id INTEGER NOT NULL, ord INTEGER NOT NULL, reps INTEGER DEFAULT 0, weight REAL DEFAULT 0, done INTEGER DEFAULT 0)");
         d.execSQL("CREATE INDEX idx_set_workout ON workout_set(workout_id)");
         createWeightLog(d);
+        createRoutines(d);
         seedExercises(d);
     }
 
@@ -124,6 +134,19 @@ final class Db extends SQLiteOpenHelper {
             fillDurations(d);
         }
         if (oldV < 3) createWeightLog(d);
+        if (oldV < 4) createRoutines(d);
+    }
+
+    /** Saved and auto-saved routines, and each workout's own copy of its routine. An empty routine name means auto-saved. */
+    private static void createRoutines(SQLiteDatabase d) {
+        d.execSQL("CREATE TABLE routine (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', "
+                + "fingerprint TEXT NOT NULL, last_used INTEGER NOT NULL)");
+        d.execSQL("CREATE TABLE routine_exercise (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER NOT NULL, "
+                + "ord INTEGER NOT NULL, name TEXT NOT NULL, sets INTEGER NOT NULL, reps INTEGER NOT NULL, weight REAL NOT NULL DEFAULT 0)");
+        d.execSQL("CREATE TABLE workout_exercise (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, "
+                + "ord INTEGER NOT NULL, name TEXT NOT NULL, sets INTEGER NOT NULL, reps INTEGER NOT NULL, weight REAL NOT NULL DEFAULT 0)");
+        d.execSQL("CREATE INDEX idx_routine_exercise_routine ON routine_exercise(routine_id)");
+        d.execSQL("CREATE INDEX idx_workout_exercise_workout ON workout_exercise(workout_id)");
     }
 
     /** One weight per day; logging a day again replaces it. */
@@ -458,6 +481,7 @@ final class Db extends SQLiteOpenHelper {
         d.beginTransaction();
         try {
             d.delete("workout_set", "workout_id = ?", new String[] {String.valueOf(id)});
+            d.delete("workout_exercise", "workout_id = ?", new String[] {String.valueOf(id)});
             d.delete("workout", "id = ?", new String[] {String.valueOf(id)});
             d.setTransactionSuccessful();
         } finally { d.endTransaction(); }
@@ -546,14 +570,281 @@ final class Db extends SQLiteOpenHelper {
                 new String[] {String.valueOf(workoutId), String.valueOf(exerciseId)});
     }
 
-    /** {sets, done sets, volume kg, distinct exercises} for a workout. */
+    /** {sets, done sets, volume kg, distinct exercises} for a workout; volume includes the routine copy. */
     double[] workoutStats(long workoutId) {
-        Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*), TOTAL(done), TOTAL(CASE WHEN done = 1 THEN reps * weight ELSE 0 END), "
-                + "COUNT(DISTINCT exercise_id) FROM workout_set WHERE workout_id = ?", new String[] {String.valueOf(workoutId)});
+        Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*), TOTAL(done), TOTAL(CASE WHEN done = 1 THEN reps * weight ELSE 0 END) "
+                + "+ (SELECT TOTAL(sets * reps * weight) FROM workout_exercise WHERE workout_id = ?), "
+                + "COUNT(DISTINCT exercise_id) FROM workout_set WHERE workout_id = ?",
+                new String[] {String.valueOf(workoutId), String.valueOf(workoutId)});
         try {
             if (c.moveToFirst()) return new double[] {c.getDouble(0), c.getDouble(1), c.getDouble(2), c.getDouble(3)};
         } finally { c.close(); }
         return new double[4];
+    }
+
+    // ---------- routines ----------
+
+    private static void putLift(ContentValues v, int ord, FastingLogic.Lift l) {
+        v.put("ord", ord);
+        v.put("name", l.name);
+        v.put("sets", l.sets);
+        v.put("reps", l.reps);
+        v.put("weight", l.weight);
+    }
+
+    private static FastingLogic.Lift lift(Cursor c) {
+        FastingLogic.Lift l = new FastingLogic.Lift();
+        l.name = s(c, "name"); l.sets = i(c, "sets"); l.reps = i(c, "reps"); l.weight = dbl(c, "weight");
+        return l;
+    }
+
+    private static List<FastingLogic.Lift> readLifts(SQLiteDatabase d, String table, String fk, long id) {
+        List<FastingLogic.Lift> out = new ArrayList<FastingLogic.Lift>();
+        Cursor c = d.query(table, null, fk + " = ?", new String[] {String.valueOf(id)}, null, null, "ord, id");
+        try { while (c.moveToNext()) out.add(lift(c)); } finally { c.close(); }
+        return out;
+    }
+
+    private static void writeLifts(SQLiteDatabase d, String table, String fk, long id, List<FastingLogic.Lift> lifts) {
+        d.delete(table, fk + " = ?", new String[] {String.valueOf(id)});
+        for (int n = 0; n < lifts.size(); n++) {
+            ContentValues v = new ContentValues();
+            v.put(fk, id);
+            putLift(v, n, lifts.get(n));
+            d.insert(table, null, v);
+        }
+    }
+
+    /** Routines matching a filter, last used first, with their lifts. */
+    private static List<Routine> readRoutines(SQLiteDatabase d, String where, String[] args) {
+        List<Routine> out = new ArrayList<Routine>();
+        Cursor c = d.query("routine", null, where, args, null, null, "last_used DESC, id DESC");
+        try {
+            while (c.moveToNext()) {
+                Routine r = new Routine();
+                r.id = l(c, "id"); r.name = s(c, "name"); r.lastUsed = l(c, "last_used");
+                out.add(r);
+            }
+        } finally { c.close(); }
+        for (Routine r : out) r.lifts = readLifts(d, "routine_exercise", "routine_id", r.id);
+        return out;
+    }
+
+    private static Routine routineById(SQLiteDatabase d, long id) {
+        List<Routine> rs = readRoutines(d, "id = ?", new String[] {String.valueOf(id)});
+        return rs.isEmpty() ? null : rs.get(0);
+    }
+
+    private static Routine namedBy(SQLiteDatabase d, String name) {
+        String key = FastingLogic.nameKey(name);
+        for (Routine r : readRoutines(d, "name <> ''", null)) if (FastingLogic.nameKey(r.name).equals(key)) return r;
+        return null;
+    }
+
+    private static void removeRoutine(SQLiteDatabase d, long id) {
+        d.delete("routine_exercise", "routine_id = ?", new String[] {String.valueOf(id)});
+        d.delete("routine", "id = ?", new String[] {String.valueOf(id)});
+    }
+
+    /** Stores a routine's lifts and fingerprint, and marks it used now. */
+    private static void fill(SQLiteDatabase d, long id, List<FastingLogic.Lift> lifts) {
+        ContentValues v = new ContentValues();
+        v.put("fingerprint", FastingLogic.routineFingerprint(lifts));
+        v.put("last_used", System.currentTimeMillis());
+        d.update("routine", v, "id = ?", new String[] {String.valueOf(id)});
+        writeLifts(d, "routine_exercise", "routine_id", id, lifts);
+    }
+
+    /** Auto-saved routines duplicating a saved one are redundant. */
+    private static void dropUnnamedLike(SQLiteDatabase d, String fingerprint, long keepId) {
+        Cursor c = d.query("routine", new String[] {"id"}, "name = '' AND fingerprint = ? AND id <> ?",
+                new String[] {fingerprint, String.valueOf(keepId)}, null, null, null);
+        List<Long> ids = new ArrayList<Long>();
+        try { while (c.moveToNext()) ids.add(c.getLong(0)); } finally { c.close(); }
+        for (long id : ids) removeRoutine(d, id);
+    }
+
+    /** Saved routines (named) or Recent ones, last used first. */
+    List<Routine> routines(boolean named) {
+        return readRoutines(getReadableDatabase(), named ? "name <> ''" : "name = ''", null);
+    }
+
+    Routine getRoutine(long id) { return routineById(getReadableDatabase(), id); }
+
+    Routine namedRoutine(String name) { return namedBy(getReadableDatabase(), name); }
+
+    /** Save as: overwrites a routine with the same name, else names a matching Recent one, else adds a new one. */
+    long saveRoutine(String name, List<FastingLogic.Lift> lifts) {
+        SQLiteDatabase d = getWritableDatabase();
+        String fp = FastingLogic.routineFingerprint(lifts);
+        d.beginTransaction();
+        try {
+            long id;
+            Routine same = namedBy(d, name);
+            Routine match = null;
+            if (same == null) {
+                List<Routine> hits = readRoutines(d, "name = '' AND fingerprint = ?", new String[] {fp});
+                if (!hits.isEmpty()) match = hits.get(0);
+            }
+            if (same != null) id = same.id;
+            else if (match != null) id = match.id;
+            else {
+                ContentValues v = new ContentValues();
+                v.put("fingerprint", fp);
+                v.put("last_used", System.currentTimeMillis());
+                id = d.insert("routine", null, v);
+            }
+            ContentValues nm = new ContentValues();
+            nm.put("name", name.trim());
+            d.update("routine", nm, "id = ?", new String[] {String.valueOf(id)});
+            fill(d, id, lifts);
+            dropUnnamedLike(d, fp, id);
+            d.setTransactionSuccessful();
+            return id;
+        } finally { d.endTransaction(); }
+    }
+
+    /** Overwrites a routine's lifts; returns the id now holding them, which differs when a Recent one merged into another. */
+    long updateRoutine(long id, List<FastingLogic.Lift> lifts) {
+        SQLiteDatabase d = getWritableDatabase();
+        String fp = FastingLogic.routineFingerprint(lifts);
+        d.beginTransaction();
+        try {
+            Routine r = routineById(d, id);
+            if (r == null) return 0;
+            if (!r.named()) {
+                List<Routine> hits = readRoutines(d, "fingerprint = ? AND id <> ?", new String[] {fp, String.valueOf(id)});
+                Routine best = null;
+                for (Routine h : hits) if (best == null || (h.named() && !best.named())) best = h;
+                if (best != null) {
+                    removeRoutine(d, id);
+                    ContentValues v = new ContentValues();
+                    v.put("last_used", System.currentTimeMillis());
+                    d.update("routine", v, "id = ?", new String[] {String.valueOf(best.id)});
+                    d.setTransactionSuccessful();
+                    return best.id;
+                }
+            }
+            fill(d, id, lifts);
+            if (r.named()) dropUnnamedLike(d, fp, id);
+            d.setTransactionSuccessful();
+            return id;
+        } finally { d.endTransaction(); }
+    }
+
+    void renameRoutine(long id, String name) {
+        SQLiteDatabase d = getWritableDatabase();
+        d.beginTransaction();
+        try {
+            Routine r = routineById(d, id);
+            if (r == null) return;
+            ContentValues v = new ContentValues();
+            v.put("name", name.trim());
+            d.update("routine", v, "id = ?", new String[] {String.valueOf(id)});
+            dropUnnamedLike(d, FastingLogic.routineFingerprint(r.lifts), id);
+            d.setTransactionSuccessful();
+        } finally { d.endTransaction(); }
+    }
+
+    void deleteRoutine(long id) {
+        SQLiteDatabase d = getWritableDatabase();
+        d.beginTransaction();
+        try {
+            removeRoutine(d, id);
+            d.setTransactionSuccessful();
+        } finally { d.endTransaction(); }
+    }
+
+    /** Undo of a delete: brings the routine back with its id, name and last used time. */
+    void restoreRoutine(Routine r) {
+        SQLiteDatabase d = getWritableDatabase();
+        d.beginTransaction();
+        try {
+            removeRoutine(d, r.id);
+            String fp = FastingLogic.routineFingerprint(r.lifts);
+            ContentValues v = new ContentValues();
+            v.put("id", r.id);
+            v.put("name", r.name);
+            v.put("fingerprint", fp);
+            v.put("last_used", r.lastUsed);
+            d.insert("routine", null, v);
+            writeLifts(d, "routine_exercise", "routine_id", r.id, r.lifts);
+            if (r.named()) dropUnnamedLike(d, fp, r.id);
+            d.setTransactionSuccessful();
+        } finally { d.endTransaction(); }
+    }
+
+    /** Auto-save on logging: reuses a matching routine (a saved one first), else adds a Recent one, keeping the newest 20. */
+    void rememberRoutine(List<FastingLogic.Lift> lifts) {
+        if (lifts.isEmpty()) return;
+        SQLiteDatabase d = getWritableDatabase();
+        String fp = FastingLogic.routineFingerprint(lifts);
+        d.beginTransaction();
+        try {
+            Routine best = null;
+            for (Routine h : readRoutines(d, "fingerprint = ?", new String[] {fp})) if (best == null || (h.named() && !best.named())) best = h;
+            ContentValues v = new ContentValues();
+            v.put("last_used", System.currentTimeMillis());
+            if (best != null) d.update("routine", v, "id = ?", new String[] {String.valueOf(best.id)});
+            else {
+                long id = d.insert("routine", null, v);
+                fill(d, id, lifts);
+            }
+            List<Routine> recent = readRoutines(d, "name = ''", null);
+            for (int n = FastingLogic.RECENT_ROUTINES; n < recent.size(); n++) removeRoutine(d, recent.get(n).id);
+            d.setTransactionSuccessful();
+        } finally { d.endTransaction(); }
+    }
+
+    // ---------- workout routine copies ----------
+
+    List<FastingLogic.Lift> workoutLifts(long workoutId) {
+        return readLifts(getReadableDatabase(), "workout_exercise", "workout_id", workoutId);
+    }
+
+    void setWorkoutLifts(long workoutId, List<FastingLogic.Lift> lifts) {
+        SQLiteDatabase d = getWritableDatabase();
+        d.beginTransaction();
+        try {
+            writeLifts(d, "workout_exercise", "workout_id", workoutId, lifts);
+            d.setTransactionSuccessful();
+        } finally { d.endTransaction(); }
+    }
+
+    /** The newest earlier strength entry of an exercise, first row if repeated; null if none. Pass 0 to exclude no workout. */
+    FastingLogic.Lift lastLift(String name, long excludeWorkoutId) {
+        String key = FastingLogic.nameKey(name);
+        Cursor c = getReadableDatabase().rawQuery("SELECT we.name, we.sets, we.reps, we.weight FROM workout_exercise we "
+                + "JOIN workout w ON w.id = we.workout_id WHERE w.id <> ? ORDER BY w.start_at DESC, we.ord",
+                new String[] {String.valueOf(excludeWorkoutId)});
+        try {
+            while (c.moveToNext()) {
+                FastingLogic.Lift l = lift(c);
+                if (FastingLogic.nameKey(l.name).equals(key)) return l;
+            }
+        } finally { c.close(); }
+        return null;
+    }
+
+    /** Exercise names for suggestions: logged ones, then routine ones, then the library; first spelling wins. */
+    List<String> liftNames() {
+        SQLiteDatabase d = getReadableDatabase();
+        Map<String, String> out = new LinkedHashMap<String, String>();
+        String[] queries = {
+            "SELECT we.name FROM workout_exercise we JOIN workout w ON w.id = we.workout_id ORDER BY w.start_at DESC, we.ord",
+            "SELECT re.name FROM routine_exercise re JOIN routine r ON r.id = re.routine_id ORDER BY r.last_used DESC, re.ord",
+            "SELECT name FROM exercise ORDER BY name"};
+        for (String q : queries) {
+            Cursor c = d.rawQuery(q, null);
+            try {
+                while (c.moveToNext()) {
+                    String n = c.getString(0).trim();
+                    String key = FastingLogic.nameKey(n);
+                    if (!key.isEmpty() && !out.containsKey(key)) out.put(key, n);
+                }
+            } finally { c.close(); }
+        }
+        return new ArrayList<String>(out.values());
     }
 
     // ---------- body weight ----------
